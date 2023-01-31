@@ -1,0 +1,29 @@
+{
+    "name": "shish/gqla",
+    "type": "library",
+    "description": "A set of annotations for generating graphql APIs",
+    "keywords": ["graphql"],
+    "homepage": "https://github.com/shish/gqla",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Shish",
+            "email": "webmaster@shishnet.org",
+            "homepage": "https://shish.io",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "webonyx/graphql-php": "^15.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+		"friendsofphp/php-cs-fixer" : "^3.12"
+    },
+    "autoload": {
+        "files": [
+            "src/gqla.php"
+        ]
+    }
+}
