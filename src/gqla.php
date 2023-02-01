@@ -145,7 +145,7 @@ function getOrCreateObjectType($n, $cls=null)
  *     "tags" => Type::listOf(Type::string())
  *   ]
  */
-function getArgs(array $argTypes, \ReflectionMethod $method, bool $ignoreFirst)
+function getArgs(array $argTypes, \ReflectionMethod|\ReflectionFunction $method, bool $ignoreFirst)
 {
     $args = [];
     $n = 0;
@@ -178,6 +178,7 @@ function inspectFunction(ReflectionMethod|ReflectionFunction $meth): array
             $f = [
                 'type' => maybeGetType($methType),
                 'description' => $methAttr->getArguments()['description'] ?? null,
+                'deprecationReason' => $methAttr->getArguments()['deprecationReason'] ?? null,
                 'args' => getArgs($methAttr->getArguments()['args'] ?? [], $meth, false),
                 'resolve' => static fn ($rootValue, array $args) => $meth->invokeArgs(null, $args),
             ];
@@ -243,6 +244,7 @@ function inspectClass(\ReflectionClass $reflection): array
                             getOrCreateObjectType($extends)->config['fields'][$methName] = [
                                 'type' => maybeGetType($methType),
                                 'description' => $methAttr->getArguments()['description'] ?? null,
+                                'deprecationReason' => $methAttr->getArguments()['deprecationReason'] ?? null,
                                 'args' => getArgs($methAttr->getArguments()['args'] ?? [], $meth, false),
                                 'resolve' => static fn ($rootValue, array $args) => $meth->invokeArgs($rootValue, $args),
                             ];
@@ -254,6 +256,7 @@ function inspectClass(\ReflectionClass $reflection): array
                             getOrCreateObjectType($extends)->config['fields'][$methName] = [
                                 'type' => maybeGetType($methType),
                                 'description' => $methAttr->getArguments()['description'] ?? null,
+                                'deprecationReason' => $methAttr->getArguments()['deprecationReason'] ?? null,
                                 'args' => getArgs($methAttr->getArguments()['args'] ?? [], $meth, true),
                                 'resolve' => static fn ($rootValue, array $args) => $meth->invokeArgs(null, [$rootValue, ...$args]),
                             ];
@@ -275,22 +278,19 @@ function inspectClass(\ReflectionClass $reflection): array
     return [$queries, $mutations];
 }
 
-function genSchema()
-{
+function genSchemaFromThings(array $classes, array $functions): Schema {
     $all_queries = [];
     $all_mutations = [];
-    foreach (get_declared_classes() as $cls) {
+    foreach ($classes as $cls) {
         [$queries, $mutations] = inspectClass(new \ReflectionClass($cls));
         $all_queries = array_merge($all_queries, $queries);
         $all_mutations = array_merge($all_mutations, $mutations);
     }
-    /*
-    foreach(get_declared_functions() as $func) {
+    foreach($functions as $func) {
         [$queries, $mutations] = inspectFunction(new \ReflectionFunction($func));
         $all_queries = array_merge($all_queries, $queries);
         $all_mutations = array_merge($all_mutations, $mutations);
     }
-    */
 
     return new Schema(
         [
@@ -303,5 +303,13 @@ function genSchema()
                 'fields' => $all_mutations,
             ]),
         ]
+    );
+}
+
+function genSchema(): Schema
+{
+    return genSchemaFromThings(
+        get_declared_classes(),
+        get_defined_functions()["user"]
     );
 }

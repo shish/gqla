@@ -34,10 +34,13 @@ type Comment {
   id: Int!
   text: String!
   author: User
+  author_name: String @deprecated(reason: \"Use author subfield\")
 }
 
 type Mutation {
   create_post(title: String!, body: String!): Post!
+  login(username: String!, password: String!): User!
+  logout: Boolean!
 }
 ",
             \GraphQL\Utils\SchemaPrinter::doPrint($schema)

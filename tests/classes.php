@@ -136,6 +136,12 @@ class Comment
         return $this->author_id ? User::by_id($this->author_id) : null;
     }
 
+    #[GraphQLField(deprecationReason: "Use author subfield")]
+    public function author_name(): ?string
+    {
+        return $this->author_id ? User::by_id($this->author_id)->name : null;
+    }
+
     #[GraphQLField(extends: "Post", name: "comments", type: "[Comment!]!")]
     public static function find_comments_on_post(Post $self): array
     {
