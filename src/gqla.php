@@ -192,7 +192,7 @@ function inspectClass(array &$types, \ReflectionClass $reflection): void
         if ($objAttr->getName() == Expose::class) {
             $objName = $objAttr->getArguments()['name'] ?? $reflection->getName();
             log("Found object {$objName}");
-            $t = getOrCreateObjectType($types, $objName);
+            $t = getOrCreateObjectType($types, $objName, $reflection->getName());
             // TODO: set attributes of $t other than fields
         }
     }

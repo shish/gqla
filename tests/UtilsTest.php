@@ -97,7 +97,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
 
         // Inspecting a method of a class should add a new field to that class
         $types = [];
-        \GQLA\inspectFunction($types, new \ReflectionMethod("Post::author"), "Post");
+        \GQLA\inspectFunction($types, new \ReflectionMethod("MyPostClass::author"), "Post");
         $this->assertArrayHasKey("Post", $types);
         $this->assertArrayHasKey("author", $types["Post"]->config["fields"]);
 
@@ -105,7 +105,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         // #[Expose(extends: "Query", name: "posts")]
         // should create a new "posts" field on the Query type
         $types = [];
-        \GQLA\inspectFunction($types, new \ReflectionMethod("Post::search_posts"), "Post");
+        \GQLA\inspectFunction($types, new \ReflectionMethod("MyPostClass::search_posts"), "Post");
         $this->assertArrayHasKey("Query", $types);
         $this->assertArrayHasKey("posts", $types["Query"]->config["fields"]);
     }

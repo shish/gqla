@@ -37,8 +37,8 @@ $db = [
     ]
 ];
 
-#[Expose]
-class Post
+#[Expose(name: "Post")]
+class MyPostClass
 {
     #[Expose]
     public int $id;
@@ -60,10 +60,10 @@ class Post
     }
 
     #[Expose(extends: "Query", name: "post")]
-    public static function by_id(int $id): Post
+    public static function by_id(int $id): MyPostClass
     {
         global $db;
-        $u = new Post();
+        $u = new MyPostClass();
         foreach ($db["posts"][$id] as $k => $v) {
             $u->$k = $v;
         }
@@ -71,10 +71,10 @@ class Post
     }
 
     #[Expose(extends: "Mutation")]
-    public static function create_post(string $title, string $body): Post
+    public static function create_post(string $title, string $body): MyPostClass
     {
         global $db;
-        $p = new Post();
+        $p = new MyPostClass();
         $p->title = $title;
         $p->body = $body;
         $db["posts"][] = $p;
@@ -87,7 +87,7 @@ class Post
         global $db;
         $cs = [];
         foreach ($db["posts"] as $row) {
-            $c = new Post();
+            $c = new MyPostClass();
             foreach ($row as $k => $v) {
                 $c->$k = $v;
             }
@@ -140,7 +140,7 @@ class Comment
     }
 
     #[Expose(extends: "Post", name: "comments", type: "[Comment!]!")]
-    public static function find_comments_on_post(Post $self): array
+    public static function find_comments_on_post(MyPostClass $self): array
     {
         global $db;
         $cs = [];
