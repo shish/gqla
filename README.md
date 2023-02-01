@@ -1,12 +1,15 @@
 # gqla
 A GraphQL schema generator based on PHP Attributes
 
+Because when your webapp already has objects for internal use,
+you shoudn't need to rewrite or duplicate everything in order
+to query those objects via graphql :)
+
 The schemas generated here are based on https://github.com/webonyx/graphql-php,
 so once you've generated a schema, look at the docs over there for how
-to make use of it :)
+to make use of it
 
-If your webapp already has objects for internal use, you can easily turn
-them into graphql objects and query them remotely, eg
+Example:
 
 ```php
 use GQLA\Expose;
