@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-use GQLA\GraphQLObject;
-use GQLA\GraphQLField;
-use GQLA\GraphQLQuery;
-use GQLA\GraphQLMutation;
+use GQLA\Expose;
 
 $db = [
     "posts" => [
@@ -40,29 +37,29 @@ $db = [
     ]
 ];
 
-#[GraphQLObject]
+#[Expose]
 class Post
 {
-    #[GraphQLField]
+    #[Expose]
     public int $id;
-    #[GraphQLField]
+    #[Expose]
     public string $title;
-    #[GraphQLField]
+    #[Expose]
     public bool $published;
-    #[GraphQLField]
+    #[Expose]
     public string $body;
-    #[GraphQLField(type: "[String!]!")]
+    #[Expose(type: "[String!]!")]
     public array $tags;
 
     public int $author_id;
 
-    #[GraphQLField]
+    #[Expose]
     public function author(): User
     {
         return User::by_id($this->author_id);
     }
 
-    #[GraphQLQuery(name: "post")]
+    #[Expose(extends: "Query", name: "post")]
     public static function by_id(int $id): Post
     {
         global $db;
@@ -73,7 +70,7 @@ class Post
         return $u;
     }
 
-    #[GraphQLMutation]
+    #[Expose(extends: "Mutation")]
     public static function create_post(string $title, string $body): Post
     {
         global $db;
@@ -84,7 +81,7 @@ class Post
         return $p;
     }
 
-    #[GraphQLQuery(name: "posts", type: "[Post!]!")]
+    #[Expose(extends: "Query", name: "posts", type: "[Post!]!")]
     public static function search_posts(): array
     {
         global $db;
@@ -100,12 +97,12 @@ class Post
     }
 }
 
-#[GraphQLObject]
+#[Expose]
 class User
 {
-    #[GraphQLField]
+    #[Expose]
     public int $id;
-    #[GraphQLField]
+    #[Expose]
     public string $name;
 
     public static function by_id(int $id)
@@ -119,30 +116,30 @@ class User
     }
 }
 
-#[GraphQLObject]
+#[Expose]
 class Comment
 {
-    #[GraphQLField]
+    #[Expose]
     public int $id;
-    #[GraphQLField]
+    #[Expose]
     public string $text;
 
     public int $post_id;
     public ?int $author_id;
 
-    #[GraphQLField]
+    #[Expose]
     public function author(): ?User
     {
         return $this->author_id ? User::by_id($this->author_id) : null;
     }
 
-    #[GraphQLField(deprecationReason: "Use author subfield")]
+    #[Expose(deprecationReason: "Use author subfield")]
     public function author_name(): ?string
     {
         return $this->author_id ? User::by_id($this->author_id)->name : null;
     }
 
-    #[GraphQLField(extends: "Post", name: "comments", type: "[Comment!]!")]
+    #[Expose(extends: "Post", name: "comments", type: "[Comment!]!")]
     public static function find_comments_on_post(Post $self): array
     {
         global $db;
@@ -160,13 +157,13 @@ class Comment
     }
 }
 
-#[GraphQLMutation]
+#[Expose(extends: "Mutation")]
 function login(string $username, string $password): User
 {
     return new User();
 }
 
-#[GraphQLMutation]
+#[Expose(extends: "Mutation")]
 function logout(): bool
 {
     return true;
