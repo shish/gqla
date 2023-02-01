@@ -32,7 +32,7 @@ function maybeGetType(array &$types, string $n)
         return Type::listOf(maybeGetType($types, substr($n, 1, strlen($n)-2)));
     }
     if ($n == "array") {
-        throw new \Exception("Can't use 'array' as a type - you need to use an annotation, eg GraphQLField(type: '[string]')");
+        throw new \Exception("Can't use 'array' as a type - you need to use an attribute, eg GraphQLField(type: '[string]')");
     }
 
     if (array_key_exists($n, $types)) {

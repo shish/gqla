@@ -1,5 +1,5 @@
 # gqla
-A GraphQL schema generator based on PHP Annotations
+A GraphQL schema generator based on PHP Attributes
 
 The schemas generated here are based on https://github.com/webonyx/graphql-php,
 so once you've generated a schema, look at the docs over there for how
