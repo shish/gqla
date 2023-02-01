@@ -163,9 +163,9 @@ And get a response like
 - `extends`: By default, an exposed field on an exposed object will be
   added as a field of that object. But to add a new root query you need
   to extend `Query`, or you can also extend your other objects (eg, a
-  "likes" plugin could add a "number_of_likes" field onto your "BlogPost"
+  "likes" plugin could add a `number_of_likes` field onto your `BlogPost`
   object)
 - `description`: Add a description to your GraphQL schema for anybody
-  who wants to develop clients apps
+  who wants to develop client apps
 - `deprecationReason`: Mark this field as deprecated
 
