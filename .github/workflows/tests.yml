@@ -20,7 +20,7 @@ jobs:
       with:
         version: 9
         php_version: ${{ matrix.php-versions }}
-        args: tests
+        args: --bootstrap vendor/autoload.php tests
 
   static:
     name: Static Analysis
