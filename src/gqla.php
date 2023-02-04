@@ -37,6 +37,8 @@ function log(string $s): void
  * object (eg `NonNull(GType::string())`). If we don't currently
  * know of a type object by the given name, then we return
  * a function which does the lookup later.
+ * 
+ * @param GType[] $types
  */
 function maybeGetType(array &$types, string $n): GType|\Closure
 {
@@ -63,7 +65,7 @@ function maybeGetType(array &$types, string $n): GType|\Closure
     }
 }
 
-/*
+/**
  * When we come across
  *
  *   #[Type(name: Foo)]
@@ -93,6 +95,8 @@ function maybeGetType(array &$types, string $n): GType|\Closure
  *
  * then we also want to create and register a Foo object
  * with a blah() field
+ *
+ * @param GType[] $types
  */
 function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): ObjectType
 {
@@ -104,6 +108,9 @@ function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): Obj
     }
     if ($cls && !array_key_exists($cls, $types)) {
         $types[$cls] = $types[$n];
+    }
+    if (!is_a($types[$n], ObjectType::class)) {
+        throw new \Exception("Type $n exists, but is not an ObjectType");
     }
     return $types[$n];
 }
@@ -125,8 +132,12 @@ function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): Obj
  *     "id" => GType::int(),
  *     "tags" => GType::listOf(GType::string())
  *   ]
+ * 
+ * @param GType[] $types
+ * @param String[] $argTypes
+ * @return array<GType|\Closure>
  */
-function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFunction $method, bool $ignoreFirst)
+function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFunction $method, bool $ignoreFirst): array
 {
     $args = [];
     $n = 0;
@@ -143,10 +154,13 @@ function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFu
     return $args;
 }
 
-function phpTypeToGraphQL(\ReflectionNamedType|null $type): string
+function phpTypeToGraphQL(\ReflectionType|null $type): string
 {
     if (is_null($type)) {
         throw new \Exception("PHP Type not specified (TODO: have an error message that doesn't suck)");
+    }
+    if (!is_a($type, \ReflectionNamedType::class)) {
+        throw new \Exception("GQLA only supports named types, not {$type}");
     }
     return $type->getName() . ($type->allowsNull() ? "" : "!");
 }
@@ -154,6 +168,8 @@ function phpTypeToGraphQL(\ReflectionNamedType|null $type): string
 /**
  * Look at a function or a method, if it is a query or
  * a mutation, add it to the relevant list
+ * 
+ * @param GType[] $types
  */
 function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $meth, ?string $objName=null): void
 {
@@ -207,6 +223,9 @@ function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $m
     }
 }
 
+/**
+ * @param GType[] $types
+ */
 function inspectClass(array &$types, \ReflectionClass $reflection): void
 {
     $objName = null;
