@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('composer.lock') }}
     - uses: php-actions/composer@v6
     - uses: php-actions/phpunit@v3
       with:
@@ -22,16 +26,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('composer.lock') }}
     - uses: php-actions/composer@v6
     - uses: php-actions/phpstan@v3
       with:
         path: src
+        level: 4
 
   format:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('composer.lock') }}
     - uses: php-actions/composer@v6
     - run: ./vendor/bin/php-cs-fixer fix && git diff --exit-code
 

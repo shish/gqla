@@ -27,7 +27,7 @@ class Mutation
 {
 }
 
-function log($s): void
+function log(string $s): void
 {
     // echo "$s\n";
 }
@@ -38,7 +38,7 @@ function log($s): void
  * know of a type object by the given name, then we return
  * a function which does the lookup later.
  */
-function maybeGetType(array &$types, string $n)
+function maybeGetType(array &$types, string $n): GType|\Closure
 {
     if (str_ends_with($n, "!")) {
         return new NonNull(maybeGetType($types, substr($n, 0, strlen($n)-1)));
@@ -94,7 +94,7 @@ function maybeGetType(array &$types, string $n)
  * then we also want to create and register a Foo object
  * with a blah() field
  */
-function getOrCreateObjectType(array &$types, string $n, ?string $cls=null)
+function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): ObjectType
 {
     if (!array_key_exists($n, $types)) {
         $types[$n] = new ObjectType([
@@ -143,8 +143,11 @@ function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFu
     return $args;
 }
 
-function phpTypeToGraphQL(\ReflectionNamedType $type): string
+function phpTypeToGraphQL(\ReflectionNamedType|null $type): string
 {
+    if(is_null($type)) {
+        throw new \Exception("PHP Type not specified (TODO: have an error message that doesn't suck)");
+    }
     return $type->getName() . ($type->allowsNull() ? "" : "!");
 }
 
@@ -159,10 +162,10 @@ function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $m
             $methName = $methAttr->getArguments()['name'] ?? $meth->name;
             $methType = $methAttr->getArguments()['type'] ?? phpTypeToGraphQL($meth->getReturnType());
             $extends = $methAttr->getArguments()['extends'] ?? $objName;
-            if($methAttr->getName() == Query::class) {
+            if ($methAttr->getName() == Query::class) {
                 $extends = "Query";
             }
-            if($methAttr->getName() == Mutation::class) {
+            if ($methAttr->getName() == Mutation::class) {
                 $extends = "Mutation";
             }
             if (!$extends) {
@@ -237,6 +240,11 @@ function inspectClass(array &$types, \ReflectionClass $reflection): void
     }
 }
 
+/**
+ * @param GType[] $types
+ * @param String[] $classes
+ * @param String[] $functions
+ */
 function genSchemaFromThings(?array &$types, array $classes, array $functions): Schema
 {
     if (!$types) {
