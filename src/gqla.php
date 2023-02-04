@@ -37,7 +37,7 @@ function log(string $s): void
  * object (eg `NonNull(GType::string())`). If we don't currently
  * know of a type object by the given name, then we return
  * a function which does the lookup later.
- * 
+ *
  * @param GType[] $types
  */
 function maybeGetType(array &$types, string $n): GType|\Closure
@@ -132,7 +132,7 @@ function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): Obj
  *     "id" => GType::int(),
  *     "tags" => GType::listOf(GType::string())
  *   ]
- * 
+ *
  * @param GType[] $types
  * @param String[] $argTypes
  * @return array<GType|\Closure>
@@ -168,7 +168,7 @@ function phpTypeToGraphQL(\ReflectionType|null $type): string
 /**
  * Look at a function or a method, if it is a query or
  * a mutation, add it to the relevant list
- * 
+ *
  * @param GType[] $types
  */
 function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $meth, ?string $objName=null): void
