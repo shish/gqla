@@ -2,29 +2,78 @@
 
 namespace GQLA;
 
+use Attribute;
+
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type as GType;
-use GraphQL\Type\Definition\NonNull;
 use GraphQL\Type\Schema;
 
-#[\Attribute]
+#[Attribute(Attribute::TARGET_CLASS)]
 class Type
 {
+    /**
+     * @param string[] $args
+     */
+    public function __construct(
+        public ?string $name=null,
+        public ?string $type=null,
+        public ?array $args=null,
+        public ?string $extends=null,
+        public ?string $description=null,
+        public ?string $deprecationReason=null,
+    ) {
+    }
 }
 
-#[\Attribute]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 class Field
 {
+    /**
+     * @param string[] $args
+     */
+    public function __construct(
+        public ?string $name=null,
+        public ?string $type=null,
+        public ?array $args=null,
+        public ?string $extends=null,
+        public ?string $description=null,
+        public ?string $deprecationReason=null,
+    ) {
+    }
 }
 
-#[\Attribute]
+#[Attribute(Attribute::TARGET_METHOD | Attribute::TARGET_FUNCTION)]
 class Query
 {
+    /**
+     * @param string[] $args
+     */
+    public function __construct(
+        public ?string $name=null,
+        public ?string $type=null,
+        public ?array $args=null,
+        public ?string $extends=null,
+        public ?string $description=null,
+        public ?string $deprecationReason=null,
+    ) {
+    }
 }
 
-#[\Attribute]
+#[Attribute(Attribute::TARGET_METHOD | Attribute::TARGET_FUNCTION)]
 class Mutation
 {
+    /**
+     * @param string[] $args
+     */
+    public function __construct(
+        public ?string $name=null,
+        public ?string $type=null,
+        public ?array $args=null,
+        public ?string $extends=null,
+        public ?string $description=null,
+        public ?string $deprecationReason=null,
+    ) {
+    }
 }
 
 function log(string $s): void
@@ -38,12 +87,14 @@ function log(string $s): void
  * know of a type object by the given name, then we return
  * a function which does the lookup later.
  *
- * @param GType[] $types
+ * @param array<string,GType> $types
+ * @return GType|callable():GType
  */
-function maybeGetType(array &$types, string $n): GType|\Closure
+function maybeGetType(array &$types, string $n): GType|callable
 {
     if (str_ends_with($n, "!")) {
-        return new NonNull(maybeGetType($types, substr($n, 0, strlen($n)-1)));
+        // @phpstan-ignore-next-line - nonNull only accepts nullable Types, not all types
+        return GType::nonNull(maybeGetType($types, substr($n, 0, strlen($n)-1)));
     }
     if ($n[0] == "[") {
         return GType::listOf(maybeGetType($types, substr($n, 1, strlen($n)-2)));
@@ -96,7 +147,7 @@ function maybeGetType(array &$types, string $n): GType|\Closure
  * then we also want to create and register a Foo object
  * with a blah() field
  *
- * @param GType[] $types
+ * @param array<string,GType> $types
  */
 function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): ObjectType
 {
@@ -133,9 +184,9 @@ function getOrCreateObjectType(array &$types, string $n, ?string $cls=null): Obj
  *     "tags" => GType::listOf(GType::string())
  *   ]
  *
- * @param GType[] $types
+ * @param array<string,GType> $types
  * @param String[] $argTypes
- * @return array<GType|\Closure>
+ * @return array<GType|callable>
  */
 function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFunction $method, bool $ignoreFirst): array
 {
@@ -169,7 +220,7 @@ function phpTypeToGraphQL(\ReflectionType|null $type): string
  * Look at a function or a method, if it is a query or
  * a mutation, add it to the relevant list
  *
- * @param GType[] $types
+ * @param array<string,GType> $types
  */
 function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $meth, ?string $objName=null): void
 {
@@ -192,7 +243,10 @@ function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $m
             }
 
             $extendingOtherObject = ($extends != $objName && $extends != "Query" && $extends != "Mutation");
-            getOrCreateObjectType($types, $extends)->config['fields'][$methName] = [
+            $parentType = getOrCreateObjectType($types, $extends);
+            // 'fields' can be a callable, but the objects _we_ create are always arrays
+            // @phpstan-ignore-next-line
+            $parentType->config['fields'][$methName] = [
                 'type' => maybeGetType($types, $methType),
                 'description' => $methAttr->getArguments()['description'] ?? null,
                 'deprecationReason' => $methAttr->getArguments()['deprecationReason'] ?? null,
@@ -224,7 +278,9 @@ function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $m
 }
 
 /**
- * @param GType[] $types
+ * @template T of object
+ * @param \ReflectionClass<T> $reflection
+ * @param array<string,GType> $types
  */
 function inspectClass(array &$types, \ReflectionClass $reflection): void
 {
@@ -246,7 +302,10 @@ function inspectClass(array &$types, \ReflectionClass $reflection): void
                 $propName = $propAttr->getArguments()['name'] ?? $prop->getName();
                 $propType = $propAttr->getArguments()['type'] ?? phpTypeToGraphQL($prop->getType());
                 $extends = $propAttr->getArguments()['extends'] ?? $objName;
-                getOrCreateObjectType($types, $extends)->config['fields'][$propName] = [
+                $parentType = getOrCreateObjectType($types, $extends);
+                // 'fields' can be a callable, but the objects _we_ create are always arrays
+                // @phpstan-ignore-next-line
+                $parentType->config['fields'][$propName] = [
                     'type' => maybeGetType($types, $propType),
                 ];
                 log("- Found field $extends.$propName ($propType)");
@@ -260,9 +319,9 @@ function inspectClass(array &$types, \ReflectionClass $reflection): void
 }
 
 /**
- * @param GType[] $types
- * @param String[] $classes
- * @param String[] $functions
+ * @param array<string,GType> $types
+ * @param class-string[] $classes
+ * @param string[] $functions
  */
 function genSchemaFromThings(?array &$types, array $classes, array $functions): Schema
 {

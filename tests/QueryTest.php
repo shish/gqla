@@ -9,7 +9,7 @@ use GraphQL\Error\DebugFlag;
 
 class QueryTest extends \PHPUnit\Framework\TestCase
 {
-    public function testQuery()
+    public function testQuery(): void
     {
         $schema = \GQLA\genSchema();
         $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::RETHROW_INTERNAL_EXCEPTIONS;

@@ -10,7 +10,7 @@ use GraphQL\Type\Definition\NonNull;
 
 class UtilsTest extends \PHPUnit\Framework\TestCase
 {
-    public function testMaybeGetType()
+    public function testMaybeGetType(): void
     {
         $sentinel = Type::id();
         $types = ["sentinel" => $sentinel];
@@ -33,7 +33,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testGetOrCreateObjectType()
+    public function testGetOrCreateObjectType(): void
     {
         $types = [];
         $expectedType = new ObjectType([
@@ -58,7 +58,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         return "Example!";
     }
 
-    public function testGetArgs()
+    public function testGetArgs(): void
     {
         $types = [
             "int" => Type::int(),
@@ -73,7 +73,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testPhpTypeToGraphQL()
+    public function testPhpTypeToGraphQL(): void
     {
         $this->assertEquals(
             "string!",
@@ -81,7 +81,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testInspectFunction()
+    public function testInspectFunction(): void
     {
         // Inspecting a non-annotated function should do nothing
         $types = [];
@@ -111,7 +111,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey("posts", $types["Query"]->config["fields"]);
     }
 
-    public function testInspectClass()
+    public function testInspectClass(): void
     {
         // Inspecting a non-annotated class should do nothing
         $types = [];

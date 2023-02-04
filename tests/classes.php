@@ -51,6 +51,7 @@ class MyPostClass
     public bool $published;
     #[Field]
     public string $body;
+    /** @var string[] */
     #[Field(type: "[String!]!")]
     public array $tags;
 
@@ -84,6 +85,9 @@ class MyPostClass
         return $p;
     }
 
+    /**
+     * @return MyPostClass[]
+     */
     #[Query(name: "posts", type: "[Post!]!")]
     public static function search_posts(): array
     {
@@ -108,7 +112,7 @@ class User
     #[Field]
     public string $name;
 
-    public static function by_id(int $id)
+    public static function by_id(int $id): User
     {
         global $db;
         $u = new User();
@@ -142,6 +146,9 @@ class Comment
         return $this->author_id ? User::by_id($this->author_id)->name : null;
     }
 
+    /**
+     * @return Comment[]
+     */
     #[Field(extends: "Post", name: "comments", type: "[Comment!]!")]
     public static function find_comments_on_post(MyPostClass $self): array
     {

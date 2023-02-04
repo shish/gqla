@@ -6,7 +6,7 @@ require_once "classes.php";
 
 class SchemaTest extends \PHPUnit\Framework\TestCase
 {
-    public function testSchemaGen()
+    public function testSchemaGen(): void
     {
         $schema = \GQLA\genSchema();
         $this->assertEquals(
