@@ -12,23 +12,24 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
 {
     public function testMaybeGetType()
     {
-        $types = ["sentinel" => "test"];
+        $sentinel = Type::id();
+        $types = ["sentinel" => $sentinel];
 
         $this->assertEquals(
             \GQLA\maybeGetType($types, "sentinel"),
-            "test",
+            $sentinel,
         );
         $this->assertEquals(
             \GQLA\maybeGetType($types, "sentinel!"),
-            new NonNull("test"),
+            new NonNull($sentinel),
         );
         $this->assertEquals(
             \GQLA\maybeGetType($types, "[sentinel]"),
-            Type::listOf("test"),
+            Type::listOf($sentinel),
         );
         $this->assertEquals(
             \GQLA\maybeGetType($types, "[sentinel!]!"),
-            new NonNull(Type::listOf(new NonNull("test"))),
+            new NonNull(Type::listOf(new NonNull($sentinel))),
         );
     }
 
