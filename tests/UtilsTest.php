@@ -87,7 +87,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         \GQLA\inspectFunction($types, new \ReflectionMethod("UtilsTest::example"));
         $this->assertEquals([], $types);
 
-        // Inspecting a function annotated with #[Expose(extends: "Mutation")]
+        // Inspecting a function annotated with #[Mutation]
         // should create a new field on the Mutation type
         $types = ["User" => Type::string()];
         \GQLA\inspectFunction($types, new \ReflectionFunction("login"));
@@ -102,7 +102,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey("author", $types["Post"]->config["fields"]);
 
         // Inspecting a method of a class annotated with
-        // #[Expose(extends: "Query", name: "posts")]
+        // #[Query(name: "posts")]
         // should create a new "posts" field on the Query type
         $types = [];
         \GQLA\inspectFunction($types, new \ReflectionMethod("MyPostClass::search_posts"), "Post");
@@ -117,7 +117,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         \GQLA\inspectClass($types, new \ReflectionClass("UtilsTest"));
         $this->assertEquals([], $types);
 
-        // Inspecting a class annotated with #[Expose]
+        // Inspecting a class annotated with #[Type]
         // should create a new type
         $types = [];
         \GQLA\inspectClass($types, new \ReflectionClass("User"));

@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-use GQLA\Expose;
+use GQLA\Type;
+use GQLA\Field;
+use GQLA\Query;
+use GQLA\Mutation;
 
 $db = [
     "posts" => [
@@ -37,29 +40,29 @@ $db = [
     ]
 ];
 
-#[Expose(name: "Post")]
+#[Type(name: "Post")]
 class MyPostClass
 {
-    #[Expose]
+    #[Field]
     public int $id;
-    #[Expose]
+    #[Field]
     public string $title;
-    #[Expose]
+    #[Field]
     public bool $published;
-    #[Expose]
+    #[Field]
     public string $body;
-    #[Expose(type: "[String!]!")]
+    #[Field(type: "[String!]!")]
     public array $tags;
 
     public int $author_id;
 
-    #[Expose]
+    #[Field]
     public function author(): User
     {
         return User::by_id($this->author_id);
     }
 
-    #[Expose(extends: "Query", name: "post")]
+    #[Query(name: "post")]
     public static function by_id(int $id): MyPostClass
     {
         global $db;
@@ -70,7 +73,7 @@ class MyPostClass
         return $u;
     }
 
-    #[Expose(extends: "Mutation")]
+    #[Mutation]
     public static function create_post(string $title, string $body): MyPostClass
     {
         global $db;
@@ -81,7 +84,7 @@ class MyPostClass
         return $p;
     }
 
-    #[Expose(extends: "Query", name: "posts", type: "[Post!]!")]
+    #[Query(name: "posts", type: "[Post!]!")]
     public static function search_posts(): array
     {
         global $db;
@@ -97,12 +100,12 @@ class MyPostClass
     }
 }
 
-#[Expose]
+#[Type]
 class User
 {
-    #[Expose]
+    #[Field]
     public int $id;
-    #[Expose]
+    #[Field]
     public string $name;
 
     public static function by_id(int $id)
@@ -116,30 +119,30 @@ class User
     }
 }
 
-#[Expose]
+#[Type]
 class Comment
 {
-    #[Expose]
+    #[Field]
     public int $id;
-    #[Expose]
+    #[Field]
     public string $text;
 
     public int $post_id;
     public ?int $author_id;
 
-    #[Expose]
+    #[Field]
     public function author(): ?User
     {
         return $this->author_id ? User::by_id($this->author_id) : null;
     }
 
-    #[Expose(deprecationReason: "Use author subfield")]
+    #[Field(deprecationReason: "Use author subfield")]
     public function author_name(): ?string
     {
         return $this->author_id ? User::by_id($this->author_id)->name : null;
     }
 
-    #[Expose(extends: "Post", name: "comments", type: "[Comment!]!")]
+    #[Field(extends: "Post", name: "comments", type: "[Comment!]!")]
     public static function find_comments_on_post(MyPostClass $self): array
     {
         global $db;
@@ -157,13 +160,13 @@ class Comment
     }
 }
 
-#[Expose(extends: "Mutation")]
+#[Mutation]
 function login(string $username, string $password): User
 {
     return new User();
 }
 
-#[Expose(extends: "Mutation")]
+#[Mutation]
 function logout(): bool
 {
     return true;

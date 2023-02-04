@@ -12,15 +12,18 @@ to make use of it
 Example:
 
 ```php
-use GQLA\Expose;
+use GQLA\Type;
+use GQLA\Field;
+use GQLA\Query;
+use GQLA\Mutation;
 
 // To create a new GraphQL Type, expose a PHP class
-#[Expose]
+#[Type]
 class Post {
     // To add fields to that type, expose PHP class properties
-    #[Expose]
+    #[Field]
     public string $title;
-    #[Expose]
+    #[Field]
     public string $body;
 
     // If you don't want the field to be part of your API,
@@ -29,36 +32,36 @@ class Post {
 
     // If your field is more complicated than a property,
     // expose a PHP function and it will be called as needed
-    #[Expose(name: "author")]
+    #[Field(name: "author")]
     public function get_author(): User {
         return User::by_id($this->author_id);
     }
 
     // To add a new query or mutation, you can extend
     // the base Query or Mutation types
-    #[Expose(extends: "Query", name: "posts", type: "[Post!]!")]
+    #[Query(name: "posts", type: "[Post!]!")]
     public static function search_posts(string $text): array {
         // SELECT * FROM posts WHERE text LIKE "%{$text}%";
     }
 }
 
-#[Expose]
+#[Type]
 class User {
-    #[Expose]
+    #[Field]
     public string $name;
 }
 
-#[Expose]
+#[Type]
 class Comment {
-    #[Expose]
+    #[Field]
     public string $text;
     public int $post_id;
     public int $author_id;
-    #[Expose]
+    #[Field]
     public function author(): User {
         return User::by_id($this->author_id);
     }
-    #[Expose(deprecationReason: "Use author subfield")]
+    #[Field(deprecationReason: "Use author subfield")]
     public function author_name(): string {
         return User::by_id($this->author_id)->name;
     }
@@ -66,7 +69,7 @@ class Comment {
     // Note that even if the Comment class comes from a third-party
     // plugin, it can still add a new "comments" field onto the
     // first-party "Post" object type.
-    #[Expose(extends: "Post", type: "[Comment!]!")]
+    #[Field(extends: "Post", type: "[Comment!]!")]
     public function comments(Post $post): array {
         // SELECT * FROM comments WHERE post_id = {$post->id}
     }
@@ -140,7 +143,7 @@ And get a response like
 
 ## API
 
-`Expose` takes several parameters:
+These annotations have several common parameters:
 
 - `name`: Give a specific name to this type / field
   (default: Use the class / property / function name)
@@ -149,7 +152,7 @@ And get a response like
   - Note that if your PHP type is `array`, then you must specify `type` with
     something more specific for GraphQL, for example:
     ```php
-    #[Expose(type: "[String!]!")]
+    #[Field(type: "[String!]!")]
     function get_tags(): array {
         return ["foo", "bar"];
     }
@@ -158,16 +161,15 @@ And get a response like
   - As with type, note that this is required whenever a PHP function
     accepts an array as input, for example:
     ```php
-    #[Expose(args: ["tags" => "[String!]!"])]
+    #[Field(args: ["tags" => "[String!]!"])]
     function get_first_post_with_tags(array $tags): Post {
         return ...;
     }
     ```
 - `extends`: By default, an exposed field on an exposed object will be
-  added as a field of that object. But to add a new root query you need
-  to extend `Query`, or you can also extend your other objects (eg, a
-  "likes" plugin could add a `number_of_likes` field onto your `BlogPost`
-  object)
+  added as a field of that object. You can also extend your other objects
+  (eg, a "likes" plugin could add a `number_of_likes` field onto your
+  `BlogPost` object)
 - `description`: Add a description to your GraphQL schema for anybody
   who wants to develop client apps
 - `deprecationReason`: Mark this field as deprecated

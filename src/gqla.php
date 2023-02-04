@@ -3,12 +3,27 @@
 namespace GQLA;
 
 use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Definition\Type as GType;
 use GraphQL\Type\Definition\NonNull;
 use GraphQL\Type\Schema;
 
 #[\Attribute]
-class Expose
+class Type
+{
+}
+
+#[\Attribute]
+class Field
+{
+}
+
+#[\Attribute]
+class Query
+{
+}
+
+#[\Attribute]
+class Mutation
 {
 }
 
@@ -19,7 +34,7 @@ function log($s): void
 
 /**
  * Go from a graphql type name (eg `"String!"`) to a type
- * object (eg `NonNull(Type::string())`). If we don't currently
+ * object (eg `NonNull(GType::string())`). If we don't currently
  * know of a type object by the given name, then we return
  * a function which does the lookup later.
  */
@@ -29,7 +44,7 @@ function maybeGetType(array &$types, string $n)
         return new NonNull(maybeGetType($types, substr($n, 0, strlen($n)-1)));
     }
     if ($n[0] == "[") {
-        return Type::listOf(maybeGetType($types, substr($n, 1, strlen($n)-2)));
+        return GType::listOf(maybeGetType($types, substr($n, 1, strlen($n)-2)));
     }
     if ($n == "array") {
         throw new \Exception("Can't use 'array' as a type - you need to use an attribute, eg GraphQLField(type: '[string]')");
@@ -51,7 +66,7 @@ function maybeGetType(array &$types, string $n)
 /*
  * When we come across
  *
- *   #[Expose(name: Foo)]
+ *   #[Type(name: Foo)]
  *   class Bar {
  *     ...
  *   }
@@ -60,7 +75,7 @@ function maybeGetType(array &$types, string $n)
  * but add two entries into $_gqla_types for both Foo
  * and Bar, so that later on when somebody does
  *
- *   #[Expose]
+ *   #[Field]
  *   find_thing(): Bar {
  *     ...
  *   }
@@ -71,7 +86,7 @@ function maybeGetType(array &$types, string $n)
  *
  * Additionally, when somebody does
  *
- *   #[Expose(extends: "Foo")]
+ *   #[Field(extends: "Foo")]
  *   function blah(Foo $self): int {
  *     return $self->thing;
  *   }
@@ -107,8 +122,8 @@ function getOrCreateObjectType(array &$types, string $n, ?string $cls=null)
  * results in
  *
  *   [
- *     "id" => Type::int(),
- *     "tags" => Type::listOf(Type::string())
+ *     "id" => GType::int(),
+ *     "tags" => GType::listOf(GType::string())
  *   ]
  */
 function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFunction $method, bool $ignoreFirst)
@@ -140,10 +155,16 @@ function phpTypeToGraphQL(\ReflectionNamedType $type): string
 function inspectFunction(array &$types, \ReflectionMethod|\ReflectionFunction $meth, ?string $objName=null): void
 {
     foreach ($meth->getAttributes() as $methAttr) {
-        if ($methAttr->getName() == Expose::class) {
+        if (in_array($methAttr->getName(), [Field::class, Query::class, Mutation::class])) {
             $methName = $methAttr->getArguments()['name'] ?? $meth->name;
             $methType = $methAttr->getArguments()['type'] ?? phpTypeToGraphQL($meth->getReturnType());
             $extends = $methAttr->getArguments()['extends'] ?? $objName;
+            if($methAttr->getName() == Query::class) {
+                $extends = "Query";
+            }
+            if($methAttr->getName() == Mutation::class) {
+                $extends = "Mutation";
+            }
             if (!$extends) {
                 throw new \Exception(
                     "Can't expose method $methName - it isn't a method of a known object, ".
@@ -189,7 +210,7 @@ function inspectClass(array &$types, \ReflectionClass $reflection): void
 
     // Check if the given class is an Object
     foreach ($reflection->getAttributes() as $objAttr) {
-        if ($objAttr->getName() == Expose::class) {
+        if ($objAttr->getName() == Type::class) {
             $objName = $objAttr->getArguments()['name'] ?? $reflection->getName();
             log("Found object {$objName}");
             $t = getOrCreateObjectType($types, $objName, $reflection->getName());
@@ -199,7 +220,7 @@ function inspectClass(array &$types, \ReflectionClass $reflection): void
 
     foreach ($reflection->getProperties() as $prop) {
         foreach ($prop->getAttributes() as $propAttr) {
-            if ($propAttr->getName() == Expose::class) {
+            if ($propAttr->getName() == Field::class) {
                 $propName = $propAttr->getArguments()['name'] ?? $prop->getName();
                 $propType = $propAttr->getArguments()['type'] ?? phpTypeToGraphQL($prop->getType());
                 $extends = $propAttr->getArguments()['extends'] ?? $objName;
@@ -220,14 +241,14 @@ function genSchemaFromThings(?array &$types, array $classes, array $functions): 
 {
     if (!$types) {
         $types = [
-            "string" => Type::string(),
-            "String" => Type::string(),
-            "int" => Type::int(),
-            "Int" => Type::int(),
-            "float" => Type::float(),
-            "Float" => Type::float(),
-            "bool" => Type::boolean(),
-            "Boolean" => Type::boolean(),
+            "string" => GType::string(),
+            "String" => GType::string(),
+            "int" => GType::int(),
+            "Int" => GType::int(),
+            "float" => GType::float(),
+            "Float" => GType::float(),
+            "bool" => GType::boolean(),
+            "Boolean" => GType::boolean(),
         ];
     }
 
