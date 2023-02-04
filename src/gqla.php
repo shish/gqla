@@ -145,7 +145,7 @@ function getArgs(array &$types, array $argTypes, \ReflectionMethod|\ReflectionFu
 
 function phpTypeToGraphQL(\ReflectionNamedType|null $type): string
 {
-    if(is_null($type)) {
+    if (is_null($type)) {
         throw new \Exception("PHP Type not specified (TODO: have an error message that doesn't suck)");
     }
     return $type->getName() . ($type->allowsNull() ? "" : "!");
