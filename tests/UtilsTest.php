@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-require_once "src/schema.php";
 require_once "classes.php";
 
 use GraphQL\Type\Definition\Type;
