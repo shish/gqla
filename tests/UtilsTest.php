@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+require_once "src/schema.php";
 require_once "classes.php";
 
 use GraphQL\Type\Definition\Type;
@@ -14,42 +15,39 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
     {
         $sentinel = Type::id();
         $types = ["sentinel" => $sentinel];
+        $schema = new \GQLA\Schema($types, [], []);
 
         $this->assertEquals(
-            \GQLA\maybeGetType($types, "sentinel"),
+            $schema->maybeGetType("sentinel"),
             $sentinel,
         );
         $this->assertEquals(
-            \GQLA\maybeGetType($types, "sentinel!"),
+            $schema->maybeGetType("sentinel!"),
             new NonNull($sentinel),
         );
         $this->assertEquals(
-            \GQLA\maybeGetType($types, "[sentinel]"),
+            $schema->maybeGetType("[sentinel]"),
             Type::listOf($sentinel),
         );
         $this->assertEquals(
-            \GQLA\maybeGetType($types, "[sentinel!]!"),
+            $schema->maybeGetType("[sentinel!]!"),
             new NonNull(Type::listOf(new NonNull($sentinel))),
         );
     }
 
     public function testGetOrCreateObjectType(): void
     {
-        $types = [];
         $expectedType = new ObjectType([
             "name" => "TestNewType",
             "fields" => [],
         ]);
+        $schema = new \GQLA\Schema([], [], []);
 
-        $newType = \GQLA\getOrCreateObjectType($types, "TestNewType", 'MyNameSpace\TestNewTypeClass');
+        $newType = $schema->getOrCreateObjectType("TestNewType");
         $this->assertEquals($expectedType, $newType);
-        $this->assertEquals($expectedType, $types["TestNewType"]);
-        $this->assertEquals($expectedType, $types["MyNameSpace\TestNewTypeClass"]);
+        $this->assertEquals($expectedType, $schema->types["TestNewType"]);
 
-        $existingType = \GQLA\getOrCreateObjectType($types, "TestNewType");
-        $this->assertEquals($expectedType, $existingType);
-
-        $existingType = \GQLA\getOrCreateObjectType($types, "MyNameSpace\TestNewTypeClass");
+        $existingType = $schema->getOrCreateObjectType("TestNewType");
         $this->assertEquals($expectedType, $existingType);
     }
 
@@ -63,65 +61,86 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         $types = [
             "int" => Type::int(),
             "string" => Type::string(),
+            "boolean" => Type::boolean(),
         ];
+        $schema = new \GQLA\Schema($types, [], []);
+
+        // test getting types from the method
         $this->assertEquals(
             [
                 "foo" => Type::int(),
                 "bar" => Type::string(),
             ],
-            \GQLA\getArgs($types, [], new \ReflectionMethod("UtilsTest::example"), false),
+            $schema->getArgs([], new \ReflectionMethod("UtilsTest::example"), false),
+        );
+
+        // test getting types from the override
+        $this->assertEquals(
+            [
+                "foo" => Type::int(),
+                "bar" => Type::boolean(),
+            ],
+            $schema->getArgs(["bar"=>"boolean"], new \ReflectionMethod("UtilsTest::example"), false),
         );
     }
 
     public function testPhpTypeToGraphQL(): void
     {
+        $types = [];
+        $schema = new \GQLA\Schema($types, [], []);
         $this->assertEquals(
             "string!",
-            \GQLA\phpTypeToGraphQL((new \ReflectionMethod("UtilsTest::example"))->getReturnType()),
+            $schema->phpTypeToGraphQL((new \ReflectionMethod("UtilsTest::example"))->getReturnType()),
         );
     }
 
     public function testInspectFunction(): void
     {
         // Inspecting a non-annotated function should do nothing
-        $types = [];
-        \GQLA\inspectFunction($types, new \ReflectionMethod("UtilsTest::example"));
-        $this->assertEquals([], $types);
+        $schema = new \GQLA\Schema([], [], []);
+        $schema->inspectFunction(new \ReflectionMethod("UtilsTest::example"));
+        $this->assertEquals([], $schema->types);
 
         // Inspecting a function annotated with #[Mutation]
         // should create a new field on the Mutation type
-        $types = ["User" => Type::string()];
-        \GQLA\inspectFunction($types, new \ReflectionFunction("login"));
-        $this->assertArrayHasKey("Mutation", $types);
-        $this->assertArrayHasKey("login", $types["Mutation"]->config["fields"]);
-        $this->assertEquals(new NonNull(Type::string()), $types["Mutation"]->config["fields"]["login"]["type"]);
+        $schema = new \GQLA\Schema(["User" => Type::string()], [], []);
+        $schema->inspectFunction(new \ReflectionFunction("login"));
+        $fields = $schema->getOrCreateObjectType("Mutation")->config["fields"];
+        assert(is_array($fields));
+        $this->assertArrayHasKey("Mutation", $schema->types);
+        $this->assertArrayHasKey("login", $fields);
+        $this->assertEquals(new NonNull(Type::string()), $fields["login"]["type"]);
 
         // Inspecting a method of a class should add a new field to that class
-        $types = [];
-        \GQLA\inspectFunction($types, new \ReflectionMethod("MyPostClass::author"), "Post");
-        $this->assertArrayHasKey("Post", $types);
-        $this->assertArrayHasKey("author", $types["Post"]->config["fields"]);
+        $schema = new \GQLA\Schema([], [], []);
+        $schema->inspectFunction(new \ReflectionMethod("MyPostClass::author"), "Post");
+        $fields = $schema->getOrCreateObjectType("Post")->config["fields"];
+        assert(is_array($fields));
+        $this->assertArrayHasKey("Post", $schema->types);
+        $this->assertArrayHasKey("author", $fields);
 
         // Inspecting a method of a class annotated with
         // #[Query(name: "posts")]
         // should create a new "posts" field on the Query type
-        $types = [];
-        \GQLA\inspectFunction($types, new \ReflectionMethod("MyPostClass::search_posts"), "Post");
-        $this->assertArrayHasKey("Query", $types);
-        $this->assertArrayHasKey("posts", $types["Query"]->config["fields"]);
+        $schema = new \GQLA\Schema([], [], []);
+        $schema->inspectFunction(new \ReflectionMethod("MyPostClass::search_posts"), "Post");
+        $fields = $schema->getOrCreateObjectType("Query")->config["fields"];
+        assert(is_array($fields));
+        $this->assertArrayHasKey("Query", $schema->types);
+        $this->assertArrayHasKey("posts", $fields);
     }
 
     public function testInspectClass(): void
     {
         // Inspecting a non-annotated class should do nothing
-        $types = [];
-        \GQLA\inspectClass($types, new \ReflectionClass("UtilsTest"));
-        $this->assertEquals([], $types);
+        $schema = new \GQLA\Schema([], [], []);
+        $schema->inspectClass(new \ReflectionClass("UtilsTest"));
+        $this->assertEquals([], $schema->types);
 
         // Inspecting a class annotated with #[Type]
         // should create a new type
-        $types = [];
-        \GQLA\inspectClass($types, new \ReflectionClass("User"));
-        $this->assertArrayHasKey("User", $types);
+        $schema = new \GQLA\Schema([], [], []);
+        $schema->inspectClass(new \ReflectionClass("User"));
+        $this->assertArrayHasKey("User", $schema->types);
     }
 }

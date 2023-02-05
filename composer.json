@@ -23,8 +23,8 @@
         "phpstan/phpstan": "^1.9"
     },
     "autoload": {
-        "files": [
-            "src/gqla.php"
-        ]
+        "psr-4": {
+            "GQLA\\": "src"
+        }
     }
 }

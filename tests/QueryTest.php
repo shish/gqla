@@ -11,7 +11,7 @@ class QueryTest extends \PHPUnit\Framework\TestCase
 {
     public function testQuery(): void
     {
-        $schema = \GQLA\genSchema();
+        $schema = new \GQLA\Schema();
         $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::RETHROW_INTERNAL_EXCEPTIONS;
         $resp = GraphQL::executeQuery(
             $schema,

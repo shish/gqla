@@ -76,7 +76,7 @@ class Comment {
 }
 ```
 
-Then `\GQLA\genSchema()` will search for all annotated objects and
+Then `new \GQLA\Schema();` will search for all annotated objects and
 return a graphql schema like:
 
 ```graphql

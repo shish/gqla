@@ -8,7 +8,7 @@ class SchemaTest extends \PHPUnit\Framework\TestCase
 {
     public function testSchemaGen(): void
     {
-        $schema = \GQLA\genSchema();
+        $schema = new \GQLA\Schema();
         $this->assertEquals(
             "type Query {
   post(id: Int!): Post!

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use GQLA\InterfaceType;
 use GQLA\Type;
 use GQLA\Field;
 use GQLA\Query;
@@ -40,7 +41,20 @@ $db = [
     ]
 ];
 
-#[Type(name: "Post")]
+/*
+#[InterfaceType(name: "Node")]
+class Node {
+    #[Field]
+    public string $id;
+
+    #[Query]
+    public function node(string $id): Node {
+        return new Node();
+    }
+}
+*/
+
+#[Type(name: "Post", interfaces: ["Node"])]
 class MyPostClass
 {
     #[Field]
@@ -104,7 +118,7 @@ class MyPostClass
     }
 }
 
-#[Type]
+#[Type(interfaces: ["Node"])]
 class User
 {
     #[Field]
