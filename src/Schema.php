@@ -30,6 +30,7 @@ class Schema extends GSchema
     public function __construct(?array $types=null, ?array $classes=null, ?array $functions=null)
     {
         $this->types = $types ?? [
+            "ID" => GType::id(),
             "string" => GType::string(),
             "String" => GType::string(),
             "int" => GType::int(),
@@ -84,11 +85,13 @@ class Schema extends GSchema
         if (array_key_exists($n, $this->cls2type)) {
             $n = $this->cls2type[$n];
         }
-
         if (array_key_exists($n, $this->types)) {
             return $this->types[$n];
         } else {
             return function () use ($n) {
+                if (array_key_exists($n, $this->cls2type)) {
+                    $n = $this->cls2type[$n];
+                }
                 if (array_key_exists($n, $this->types)) {
                     return $this->types[$n];
                 }
@@ -139,6 +142,19 @@ class Schema extends GSchema
         }
         if (!is_a($this->types[$n], GObjectType::class)) {
             throw new \Exception("Type $n exists, but is not an ObjectType");
+        }
+        return $this->types[$n];
+    }
+    public function getOrCreateInterfaceType(string $n): GInterfaceType
+    {
+        if (!array_key_exists($n, $this->types)) {
+            $this->types[$n] = new GInterfaceType([
+                'name' => $n,
+                'fields' => [],
+            ]);
+        }
+        if (!is_a($this->types[$n], GInterfaceType::class)) {
+            throw new \Exception("Type $n exists, but is not an InterfaceType");
         }
         return $this->types[$n];
     }
@@ -261,17 +277,20 @@ class Schema extends GSchema
 
         // Check if the given class is an Object
         foreach ($reflection->getAttributes() as $objAttr) {
-            if ($objAttr->getName() == Type::class) {
+            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class])) {
                 $objName = $objAttr->getArguments()['name'] ?? $reflection->getName();
-                log("Found object {$objName}");
-                $t = $this->getOrCreateObjectType($objName);
+                if ($objAttr->getName() == Type::class) {
+                    log("Found object {$objName}");
+                    $t = $this->getOrCreateObjectType($objName);
+                } else {
+                    log("Found interface {$objName}");
+                    $t = $this->getOrCreateInterfaceType($objName);
+                }
                 $this->cls2type[$reflection->getName()] = $objName;
-                /*
                 $t->config['interfaces'] = array_map(
-                    fn($x) => $this->getOrCreateInterfaceType($x),
+                    fn ($x) => $this->getOrCreateInterfaceType($x),
                     $objAttr->getArguments()['interfaces'] ?? []
                 );
-                */
             }
         }
 
@@ -284,7 +303,7 @@ class Schema extends GSchema
                     if (is_null($extends)) {
                         throw new \Exception("Field must be attached to a Type, either implicitly or with 'extends'");
                     }
-                    $parentType = $this->getOrCreateObjectType($extends);
+                    $parentType = $this->types[$extends] ?? $this->getOrCreateObjectType($extends);
                     // 'fields' can be a callable, but the objects _we_ create are always arrays
                     // @phpstan-ignore-next-line
                     $parentType->config['fields'][$propName] = [

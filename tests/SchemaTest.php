@@ -11,27 +11,34 @@ class SchemaTest extends \PHPUnit\Framework\TestCase
         $schema = new \GQLA\Schema();
         $this->assertEquals(
             "type Query {
+  node(id: ID!): Node!
   post(id: Int!): Post!
   posts: [Post!]!
 }
 
-type Post {
-  id: Int!
+interface Node {
+  id: String!
+}
+
+type Post implements Node {
+  post_id: Int!
   title: String!
   published: Boolean!
   body: String!
   tags: [String!]!
+  id: ID!
   author: User!
   comments: [Comment!]!
 }
 
-type User {
-  id: Int!
+type User implements Node {
+  user_id: Int!
   name: String!
+  id: ID!
 }
 
 type Comment {
-  id: Int!
+  comment_id: Int!
   text: String!
   author: User
   author_name: String @deprecated(reason: \"Use author subfield\")

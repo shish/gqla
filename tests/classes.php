@@ -41,23 +41,23 @@ $db = [
     ]
 ];
 
-/*
 #[InterfaceType(name: "Node")]
-class Node {
+class Node
+{
     #[Field]
     public string $id;
 
-    #[Query]
-    public function node(string $id): Node {
+    #[Query(args: ["id"=>"ID!"])]
+    public function node(string $id): Node
+    {
         return new Node();
     }
 }
-*/
 
 #[Type(name: "Post", interfaces: ["Node"])]
 class MyPostClass
 {
-    #[Field]
+    #[Field(name: "post_id")]
     public int $id;
     #[Field]
     public string $title;
@@ -70,6 +70,12 @@ class MyPostClass
     public array $tags;
 
     public int $author_id;
+
+    #[Field(name: "id", type: "ID!")]
+    public function node_id(): string
+    {
+        return "post:{$this->id}";
+    }
 
     #[Field]
     public function author(): User
@@ -121,7 +127,7 @@ class MyPostClass
 #[Type(interfaces: ["Node"])]
 class User
 {
-    #[Field]
+    #[Field(name: "user_id")]
     public int $id;
     #[Field]
     public string $name;
@@ -135,12 +141,18 @@ class User
         }
         return $u;
     }
+
+    #[Field(name: "id", type: "ID!")]
+    public function node_id(): string
+    {
+        return "user:{$this->id}";
+    }
 }
 
 #[Type]
 class Comment
 {
-    #[Field]
+    #[Field(name: "comment_id")]
     public int $id;
     #[Field]
     public string $text;
