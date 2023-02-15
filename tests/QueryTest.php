@@ -19,6 +19,7 @@ class QueryTest extends \PHPUnit\Framework\TestCase
 {
     posts {
         title,
+        state,
         author {
             name
         },
@@ -37,6 +38,7 @@ class QueryTest extends \PHPUnit\Framework\TestCase
                     'posts' => [
                         0 => [
                             'title' => 'Hello world!',
+                            'state' => 'Published',
                             'author' => [
                                 'name' => 'Admin',
                             ],

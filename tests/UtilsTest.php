@@ -93,7 +93,8 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testNoNamespace(): void {
+    public function testNoNamespace(): void
+    {
         $schema = new \GQLA\Schema([], [], []);
         $this->assertEquals(
             "cheese",

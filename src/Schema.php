@@ -6,6 +6,7 @@ namespace GQLA;
 
 use GraphQL\Type\Definition\ObjectType as GObjectType;
 use GraphQL\Type\Definition\InterfaceType as GInterfaceType;
+use GraphQL\Type\Definition\EnumType as GEnumType;
 use GraphQL\Type\Definition\Type as GType;
 use GraphQL\Type\Schema as GSchema;
 
@@ -158,6 +159,16 @@ class Schema extends GSchema
         }
         return $this->types[$n];
     }
+    public function getOrCreateEnumType(string $n): GEnumType
+    {
+        if (!array_key_exists($n, $this->types) || !is_a($this->types[$n], Enum::class)) {
+            $this->types[$n] = new GEnumType([
+                'name' => $n,
+                'values' => [],
+            ]);
+        }
+        return $this->types[$n];
+    }
 
     /**
      * Get args in graphql format by inspecting a function.
@@ -208,7 +219,8 @@ class Schema extends GSchema
         return $type->getName() . ($type->allowsNull() ? "" : "!");
     }
 
-    public function noNamespace(string $name): string {
+    public function noNamespace(string $name): string
+    {
         $parts = explode("\\", $name);
         return $parts[count($parts)-1];
     }
@@ -282,11 +294,22 @@ class Schema extends GSchema
 
         // Check if the given class is an Object
         foreach ($reflection->getAttributes() as $objAttr) {
-            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class])) {
+            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, Enum::class])) {
                 $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
                 if ($objAttr->getName() == Type::class) {
                     log("Found object {$objName}");
                     $t = $this->getOrCreateObjectType($objName);
+                } elseif ($objAttr->getName() == Enum::class) {
+                    log("Found enum {$objName}");
+                    $t = $this->getOrCreateEnumType($objName);
+                    $vals = [];
+                    foreach ($reflection->getConstants() as $k => $v) {
+                        $vals[$k] = [
+                            'value' => $v,
+                            // 'description' =>
+                        ];
+                    }
+                    $t->config['values'] = $vals;
                 } else {
                     log("Found interface {$objName}");
                     $t = $this->getOrCreateInterfaceType($objName);

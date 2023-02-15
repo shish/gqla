@@ -23,12 +23,18 @@ interface Node {
 type Post implements Node {
   post_id: Int!
   title: String!
-  published: Boolean!
+  state: State!
   body: String!
   tags: [String!]!
   id: ID!
   author: User!
   comments: [Comment!]!
+}
+
+enum State {
+  Draft
+  Review
+  Published
 }
 
 type User implements Node {

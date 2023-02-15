@@ -5,17 +5,26 @@ declare(strict_types=1);
 namespace Demo;
 
 use GQLA\InterfaceType;
+use GQLA\Enum;
 use GQLA\Type;
 use GQLA\Field;
 use GQLA\Query;
 use GQLA\Mutation;
+
+#[Enum]
+enum State: string
+{
+    case Draft = "draft";
+    case Review = "review";
+    case Published = "published";
+}
 
 $db = [
     "posts" => [
         1 => [
             "id" => 1,
             "title" => "Hello world!",
-            "published" => true,
+            "state" => State::Published,
             "body" => "This is the first post",
             "tags" => ["introduction", "test"],
             "author_id" => 1,
@@ -64,7 +73,7 @@ class MyPostClass
     #[Field]
     public string $title;
     #[Field]
-    public bool $published;
+    public State $state;
     #[Field]
     public string $body;
     /** @var string[] */
