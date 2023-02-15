@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Demo;
+
 use GQLA\InterfaceType;
 use GQLA\Type;
 use GQLA\Field;

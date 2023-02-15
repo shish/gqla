@@ -208,6 +208,11 @@ class Schema extends GSchema
         return $type->getName() . ($type->allowsNull() ? "" : "!");
     }
 
+    public function noNamespace(string $name): string {
+        $parts = explode("\\", $name);
+        return $parts[count($parts)-1];
+    }
+
     /**
      * Look at a function or a method, if it is a query or
      * a mutation, add it to the relevant list
@@ -216,7 +221,7 @@ class Schema extends GSchema
     {
         foreach ($meth->getAttributes() as $methAttr) {
             if (in_array($methAttr->getName(), [Field::class, Query::class, Mutation::class])) {
-                $methName = $methAttr->getArguments()['name'] ?? $meth->name;
+                $methName = $methAttr->getArguments()['name'] ?? $this->noNamespace($meth->name);
                 $methType = $methAttr->getArguments()['type'] ?? $this->phpTypeToGraphQL($meth->getReturnType());
                 $extends = $methAttr->getArguments()['extends'] ?? $objName;
                 if ($methAttr->getName() == Query::class) {
@@ -278,7 +283,7 @@ class Schema extends GSchema
         // Check if the given class is an Object
         foreach ($reflection->getAttributes() as $objAttr) {
             if (in_array($objAttr->getName(), [Type::class, InterfaceType::class])) {
-                $objName = $objAttr->getArguments()['name'] ?? $reflection->getName();
+                $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
                 if ($objAttr->getName() == Type::class) {
                     log("Found object {$objName}");
                     $t = $this->getOrCreateObjectType($objName);

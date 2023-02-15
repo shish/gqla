@@ -93,53 +93,81 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testInspectFunction(): void
+    public function testNoNamespace(): void {
+        $schema = new \GQLA\Schema([], [], []);
+        $this->assertEquals(
+            "cheese",
+            $schema->noNamespace("cheese")
+        );
+        $this->assertEquals(
+            "login",
+            $schema->noNamespace("\Demo\login")
+        );
+        $this->assertEquals(
+            "MyPostClass",
+            $schema->noNamespace(\Demo\MyPostClass::class)
+        );
+    }
+
+    public function testInspectFunction_noop(): void
     {
         // Inspecting a non-annotated function should do nothing
         $schema = new \GQLA\Schema([], [], []);
         $schema->inspectFunction(new \ReflectionMethod("UtilsTest::example"));
         $this->assertEquals([], $schema->types);
+    }
 
+    public function testInspectFunction_bare_mutation(): void
+    {
         // Inspecting a function annotated with #[Mutation]
         // should create a new field on the Mutation type
-        $schema = new \GQLA\Schema(["User" => Type::string()], [], []);
-        $schema->inspectFunction(new \ReflectionFunction("login"));
+        $schema = new \GQLA\Schema(null, [], []);
+        $schema->inspectFunction(new \ReflectionFunction("\Demo\logout"));
         $fields = $schema->getOrCreateObjectType("Mutation")->config["fields"];
         assert(is_array($fields));
         $this->assertArrayHasKey("Mutation", $schema->types);
-        $this->assertArrayHasKey("login", $fields);
-        $this->assertEquals(new NonNull(Type::string()), $fields["login"]["type"]);
+        $this->assertArrayHasKey("logout", $fields);
+        $this->assertEquals(new NonNull(Type::boolean()), $fields["logout"]["type"]);
+    }
 
+    public function testInspectFunction_class_method(): void
+    {
         // Inspecting a method of a class should add a new field to that class
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectFunction(new \ReflectionMethod("MyPostClass::author"), "Post");
+        $schema->inspectFunction(new \ReflectionMethod("\Demo\MyPostClass::author"), "Post");
         $fields = $schema->getOrCreateObjectType("Post")->config["fields"];
         assert(is_array($fields));
         $this->assertArrayHasKey("Post", $schema->types);
         $this->assertArrayHasKey("author", $fields);
+    }
 
+    public function testInspectFunction_class_query(): void
+    {
         // Inspecting a method of a class annotated with
         // #[Query(name: "posts")]
         // should create a new "posts" field on the Query type
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectFunction(new \ReflectionMethod("MyPostClass::search_posts"), "Post");
+        $schema->inspectFunction(new \ReflectionMethod("\Demo\MyPostClass::search_posts"), "Post");
         $fields = $schema->getOrCreateObjectType("Query")->config["fields"];
         assert(is_array($fields));
         $this->assertArrayHasKey("Query", $schema->types);
         $this->assertArrayHasKey("posts", $fields);
     }
 
-    public function testInspectClass(): void
+    public function testInspectClass_noop(): void
     {
         // Inspecting a non-annotated class should do nothing
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectClass(new \ReflectionClass("UtilsTest"));
+        $schema->inspectClass(new \ReflectionClass(UtilsTest::class));
         $this->assertEquals([], $schema->types);
+    }
 
+    public function testInspectClass_class(): void
+    {
         // Inspecting a class annotated with #[Type]
         // should create a new type
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectClass(new \ReflectionClass("User"));
+        $schema->inspectClass(new \ReflectionClass(\Demo\User::class));
         $this->assertArrayHasKey("User", $schema->types);
     }
 }
