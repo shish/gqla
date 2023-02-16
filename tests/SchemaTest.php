@@ -41,6 +41,8 @@ type User implements Node {
   user_id: Int!
   name: String!
   id: ID!
+  add_id(n: Int!): Int!
+  add_comment_id(n: Int!): Int!
 }
 
 type Comment {

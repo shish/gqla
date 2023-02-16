@@ -158,6 +158,12 @@ class User
     {
         return "user:{$this->id}";
     }
+
+    #[Field]
+    public function add_id(int $n): int
+    {
+        return $this->id + $n;
+    }
 }
 
 #[Type]
@@ -201,6 +207,12 @@ class Comment
             }
         }
         return $cs;
+    }
+
+    #[Field(extends: "User")]
+    public static function add_comment_id(User $user, int $n): int
+    {
+        return $user->id + $n;
     }
 }
 

@@ -196,15 +196,13 @@ class Schema extends GSchema
         $args = [];
         $n = 0;
         foreach ($method->getParameters() as $p) {
-            if ($ignoreFirst && $n == 0) {
+            if ($ignoreFirst && $n++ == 0) {
                 continue;
             }
-            $n++;
             $name = $p->getName();
             $type = $this->maybeGetType($argTypes[$name] ?? $this->phpTypeToGraphQL($p->getType()));
             $args[$name] = $type;
         }
-        // var_dump($args);
         return $args;
     }
 
@@ -250,6 +248,7 @@ class Schema extends GSchema
                 }
 
                 $extendingOtherObject = ($extends != $objName && $extends != "Query" && $extends != "Mutation");
+
                 $parentType = $this->getOrCreateObjectType($extends);
                 // 'fields' can be a callable, but the objects _we_ create are always arrays
                 // @phpstan-ignore-next-line

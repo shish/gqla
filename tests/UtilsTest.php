@@ -142,6 +142,21 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         $this->assertArrayHasKey("author", $fields);
     }
 
+    public function testInspectFunction_class_method_params(): void
+    {
+        // A field added to a type can have parameters
+        $schema = new \GQLA\Schema(null, [], []);
+        $schema->inspectFunction(new \ReflectionMethod("\Demo\Comment::add_comment_id"), "Comment");
+        $fields = $schema->getOrCreateObjectType("User")->config["fields"];
+        assert(is_array($fields));
+        $this->assertArrayHasKey("User", $schema->types);
+        $this->assertArrayHasKey("add_comment_id", $fields);
+        $this->assertEquals($fields["add_comment_id"]["args"], [
+            "n" => Type::nonNull(Type::int())
+        ]);
+    }
+
+
     public function testInspectFunction_class_query(): void
     {
         // Inspecting a method of a class annotated with
