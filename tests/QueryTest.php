@@ -62,4 +62,31 @@ class QueryTest extends \PHPUnit\Framework\TestCase
             \var_export($resp, true)
         );
     }
+
+    public function testInputObject(): void
+    {
+        $schema = new \GQLA\Schema();
+        $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::RETHROW_INTERNAL_EXCEPTIONS;
+        $resp = GraphQL::executeQuery(
+            $schema,
+            'mutation createUser {
+                create_user(input: { username: "newuser", password: "waffo", email: "foo@bar.com" }) {
+                    id
+                    name
+                }
+              }'
+        )->toArray($debug);
+        $this->assertEquals(
+            [
+                'data' => [
+                    'create_user' => [
+                        'id' => 'user:42',
+                        'name' => 'newuser',
+                    ],
+                ],
+            ],
+            $resp,
+            \var_export($resp, true)
+        );
+    }
 }

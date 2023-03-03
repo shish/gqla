@@ -7,6 +7,8 @@ namespace GQLA;
 use GraphQL\Type\Definition\ObjectType as GObjectType;
 use GraphQL\Type\Definition\InterfaceType as GInterfaceType;
 use GraphQL\Type\Definition\EnumType as GEnumType;
+use GraphQL\Type\Definition\InputObjectType as GInputObjectType;
+use GraphQL\Type\Definition\InputType as GInputType;
 use GraphQL\Type\Definition\Type as GType;
 use GraphQL\Type\Schema as GSchema;
 
@@ -101,6 +103,15 @@ class Schema extends GSchema
             };
         }
     }
+    /**
+     * @return GInputType|callable():GInputType
+     */
+    public function maybeGetInputType(string $n): GInputType|callable {
+        // we trust the user to not mix up ObjectTypes and InputObjectTypes...
+        // @phpstan-ignore-next-line
+        return $this->maybeGetType($n);
+    }
+
 
     /**
      * When we come across
@@ -161,10 +172,20 @@ class Schema extends GSchema
     }
     public function getOrCreateEnumType(string $n): GEnumType
     {
-        if (!array_key_exists($n, $this->types) || !is_a($this->types[$n], Enum::class)) {
+        if (!array_key_exists($n, $this->types) || !is_a($this->types[$n], GEnumType::class)) {
             $this->types[$n] = new GEnumType([
                 'name' => $n,
                 'values' => [],
+            ]);
+        }
+        return $this->types[$n];
+    }
+    public function getOrCreateInputObjectType(string $n): GInputObjectType
+    {
+        if (!array_key_exists($n, $this->types) || !is_a($this->types[$n], GInputObjectType::class)) {
+            $this->types[$n] = new GInputObjectType([
+                'name' => $n,
+                'fields' => [],
             ]);
         }
         return $this->types[$n];
@@ -293,25 +314,51 @@ class Schema extends GSchema
 
         // Check if the given class is an Object
         foreach ($reflection->getAttributes() as $objAttr) {
-            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, Enum::class])) {
+            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, Enum::class, InputObjectType::class])) {
                 $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
-                if ($objAttr->getName() == Type::class) {
-                    log("Found object {$objName}");
-                    $t = $this->getOrCreateObjectType($objName);
-                } elseif ($objAttr->getName() == Enum::class) {
-                    log("Found enum {$objName}");
-                    $t = $this->getOrCreateEnumType($objName);
-                    $vals = [];
-                    foreach ($reflection->getConstants() as $k => $v) {
-                        $vals[$k] = [
-                            'value' => $v,
-                            // 'description' =>
-                        ];
-                    }
-                    $t->config['values'] = $vals;
-                } else {
-                    log("Found interface {$objName}");
-                    $t = $this->getOrCreateInterfaceType($objName);
+                switch($objAttr->getName()) {
+                    case Type::class:
+                        log("Found object {$objName}");
+                        $t = $this->getOrCreateObjectType($objName);
+                        break;
+                    case InterfaceType::class:
+                        log("Found interface {$objName}");
+                        $t = $this->getOrCreateInterfaceType($objName);
+                        break;
+                    case Enum::class:
+                        log("Found enum {$objName}");
+                        $t = $this->getOrCreateEnumType($objName);
+                        $vals = [];
+                        foreach ($reflection->getConstants() as $k => $v) {
+                            $vals[$k] = [
+                                'value' => $v,
+                                // 'description' =>
+                            ];
+                        }
+                        $t->config['values'] = $vals;
+                        break;
+                    case InputObjectType::class:
+                        log("Found input object {$objName}");
+                        $t = $this->getOrCreateInputObjectType($objName);
+                        $ctor = $reflection->getConstructor();
+                        if(is_null($ctor)) throw new \Exception("InputObjectTypes must have a constructor");
+                        $params = $ctor->getParameters();
+                        $fields = [];
+                        foreach($params as $p) {
+                            $field = [
+                                'name' => $p->getName(),
+                                'type' => $this->maybeGetInputType($this->phpTypeToGraphQL($p->getType())),
+                            ];
+                            if($p->isDefaultValueAvailable()) {
+                                $field['defaultValue'] = $p->getDefaultValue();
+                            }
+                            $fields[] = $field;
+                        }
+                        $t->config['fields'] = $fields;
+                        $t->config['parseValue'] = fn(array $values) => $reflection->newInstanceArgs($values);
+                        break;
+                    default:
+                        throw new \Exception("Invalid object type: " . $objAttr->getName());
                 }
                 $this->cls2type[$reflection->getName()] = $objName;
                 $t->config['interfaces'] = array_map(

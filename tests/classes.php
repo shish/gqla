@@ -10,6 +10,7 @@ use GQLA\Type;
 use GQLA\Field;
 use GQLA\Query;
 use GQLA\Mutation;
+use GQLA\InputObjectType;
 
 #[Enum]
 enum State: string
@@ -163,6 +164,26 @@ class User
     public function add_id(int $n): int
     {
         return $this->id + $n;
+    }
+}
+
+#[InputObjectType]
+class CreateUserInputs
+{
+    public function __construct(
+        public string $username,
+        public string $password,
+        public string $email = "no@example.com",
+    ) {
+    }
+
+    #[Mutation]
+    public static function create_user(CreateUserInputs $input): User
+    {
+        $u = new User();
+        $u->id = 42;
+        $u->name = $input->username;
+        return $u;
     }
 }
 

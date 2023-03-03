@@ -54,8 +54,15 @@ type Comment {
 
 type Mutation {
   create_post(title: String!, body: String!): Post!
+  create_user(input: CreateUserInputs!): User!
   login(username: String!, password: String!): User!
   logout: Boolean!
+}
+
+input CreateUserInputs {
+  username: String!
+  password: String!
+  email: String! = \"no@example.com\"
 }
 ",
             \GraphQL\Utils\SchemaPrinter::doPrint($schema)
