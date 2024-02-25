@@ -59,7 +59,7 @@ class Node
     #[Field]
     public string $id;
 
-    #[Query(args: ["id"=>"ID!"])]
+    #[Query(args: ["id" => "ID!"])]
     public function node(string $id): Node
     {
         return new Node();

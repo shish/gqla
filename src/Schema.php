@@ -30,7 +30,7 @@ class Schema extends GSchema
      * @param class-string[] $classes
      * @param string[] $functions
      */
-    public function __construct(?array $types=null, ?array $classes=null, ?array $functions=null)
+    public function __construct(?array $types = null, ?array $classes = null, ?array $functions = null)
     {
         $this->types = $types ?? [
             "ID" => GType::id(),
@@ -77,10 +77,10 @@ class Schema extends GSchema
     {
         if (str_ends_with($n, "!")) {
             // @phpstan-ignore-next-line - nonNull only accepts nullable Types, not all types
-            return GType::nonNull($this->maybeGetType(substr($n, 0, strlen($n)-1)));
+            return GType::nonNull($this->maybeGetType(substr($n, 0, strlen($n) - 1)));
         }
         if ($n[0] == "[") {
-            return GType::listOf($this->maybeGetType(substr($n, 1, strlen($n)-2)));
+            return GType::listOf($this->maybeGetType(substr($n, 1, strlen($n) - 2)));
         }
         if ($n == "array") {
             throw new \Exception("Can't use 'array' as a type - you need to use an attribute, eg Field(type: '[string]')");
@@ -104,9 +104,10 @@ class Schema extends GSchema
         }
     }
     /**
-     * @return GInputType|callable():GInputType
+     * @return (GInputType&GType)|callable():(GInputType&GType)
      */
-    public function maybeGetInputType(string $n): GInputType|callable {
+    public function maybeGetInputType(string $n): GInputType|callable
+    {
         // we trust the user to not mix up ObjectTypes and InputObjectTypes...
         // @phpstan-ignore-next-line
         return $this->maybeGetType($n);
@@ -209,8 +210,8 @@ class Schema extends GSchema
      *     "tags" => GType::listOf(GType::string())
      *   ]
      *
-     * @param String[] $argTypes
-     * @return array<GType|callable>
+     * @param array<string,string> $argTypes
+     * @return array<string,GType|callable>
      */
     public function getArgs(array $argTypes, \ReflectionMethod|\ReflectionFunction $method, bool $ignoreFirst): array
     {
@@ -241,14 +242,14 @@ class Schema extends GSchema
     public function noNamespace(string $name): string
     {
         $parts = explode("\\", $name);
-        return $parts[count($parts)-1];
+        return $parts[count($parts) - 1];
     }
 
     /**
      * Look at a function or a method, if it is a query or
      * a mutation, add it to the relevant list
      */
-    public function inspectFunction(\ReflectionMethod|\ReflectionFunction $meth, ?string $objName=null): void
+    public function inspectFunction(\ReflectionMethod|\ReflectionFunction $meth, ?string $objName = null): void
     {
         foreach ($meth->getAttributes() as $methAttr) {
             if (in_array($methAttr->getName(), [Field::class, Query::class, Mutation::class])) {
@@ -341,7 +342,9 @@ class Schema extends GSchema
                         log("Found input object {$objName}");
                         $t = $this->getOrCreateInputObjectType($objName);
                         $ctor = $reflection->getConstructor();
-                        if(is_null($ctor)) throw new \Exception("InputObjectTypes must have a constructor");
+                        if(is_null($ctor)) {
+                            throw new \Exception("InputObjectTypes must have a constructor");
+                        }
                         $params = $ctor->getParameters();
                         $fields = [];
                         foreach($params as $p) {
@@ -355,7 +358,7 @@ class Schema extends GSchema
                             $fields[] = $field;
                         }
                         $t->config['fields'] = $fields;
-                        $t->config['parseValue'] = fn(array $values) => $reflection->newInstanceArgs($values);
+                        $t->config['parseValue'] = fn (array $values) => $reflection->newInstanceArgs($values);
                         break;
                     default:
                         throw new \Exception("Invalid object type: " . $objAttr->getName());

@@ -50,7 +50,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($expectedType, $existingType);
     }
 
-    public function example(?int $foo=null, ?string $bar=null): string
+    public function example(?int $foo = null, ?string $bar = null): string
     {
         return "Example!";
     }
@@ -79,7 +79,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
                 "foo" => Type::int(),
                 "bar" => Type::boolean(),
             ],
-            $schema->getArgs(["bar"=>"boolean"], new \ReflectionMethod("UtilsTest::example"), false),
+            $schema->getArgs(["bar" => "boolean"], new \ReflectionMethod("UtilsTest::example"), false),
         );
     }
 
