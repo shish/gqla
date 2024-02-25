@@ -89,4 +89,31 @@ class QueryTest extends \PHPUnit\Framework\TestCase
             \var_export($resp, true)
         );
     }
+
+    public function testTopLevelFunction(): void
+    {
+        $schema = new \GQLA\Schema();
+        $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::RETHROW_INTERNAL_EXCEPTIONS;
+        $resp = GraphQL::executeQuery(
+            $schema,
+            'mutation createUser {
+                login(username: "Admin", password: "admin") {
+                    id
+                    name
+                }
+              }'
+        )->toArray($debug);
+        $this->assertEquals(
+            [
+                'data' => [
+                    'login' => [
+                        'id' => 'user:1',
+                        'name' => 'Admin',
+                    ],
+                ],
+            ],
+            $resp,
+            \var_export($resp, true)
+        );
+    }
 }
