@@ -20,38 +20,41 @@ enum State: string
     case Published = "published";
 }
 
-$db = [
-    "posts" => [
-        1 => [
-            "id" => 1,
-            "title" => "Hello world!",
-            "state" => State::Published,
-            "body" => "This is the first post",
-            "tags" => ["introduction", "test"],
-            "author_id" => 1,
+class FakeDB
+{
+    public static array $db = [
+        "posts" => [
+            1 => [
+                "id" => 1,
+                "title" => "Hello world!",
+                "state" => State::Published,
+                "body" => "This is the first post",
+                "tags" => ["introduction", "test"],
+                "author_id" => 1,
+            ],
         ],
-    ],
-    "users" => [
-        1 => [
-            "id" => 1,
-            "name" => "Admin",
+        "users" => [
+            1 => [
+                "id" => 1,
+                "name" => "Admin",
+            ],
         ],
-    ],
-    "comments" => [
-        1 => [
-            "id" => 1,
-            "post_id" => 1,
-            "author_id" => 1,
-            "text" => "Hi there :D",
-        ],
-        2 => [
-            "id" => 1,
-            "post_id" => 1,
-            "author_id" => null,
-            "text" => "I'm anonymous o.o",
-        ],
-    ]
-];
+        "comments" => [
+            1 => [
+                "id" => 1,
+                "post_id" => 1,
+                "author_id" => 1,
+                "text" => "Hi there :D",
+            ],
+            2 => [
+                "id" => 1,
+                "post_id" => 1,
+                "author_id" => null,
+                "text" => "I'm anonymous o.o",
+            ],
+        ]
+    ];
+}
 
 #[InterfaceType(name: "Node")]
 class Node
@@ -98,9 +101,8 @@ class MyPostClass
     #[Query(name: "post")]
     public static function by_id(int $id): MyPostClass
     {
-        global $db;
         $u = new MyPostClass();
-        foreach ($db["posts"][$id] as $k => $v) {
+        foreach (FakeDB::$db["posts"][$id] as $k => $v) {
             $u->$k = $v;
         }
         return $u;
@@ -109,11 +111,10 @@ class MyPostClass
     #[Mutation]
     public static function create_post(string $title, string $body): MyPostClass
     {
-        global $db;
         $p = new MyPostClass();
         $p->title = $title;
         $p->body = $body;
-        $db["posts"][] = $p;
+        FakeDB::$db["posts"][] = $p;
         return $p;
     }
 
@@ -123,9 +124,8 @@ class MyPostClass
     #[Query(name: "posts", type: "[Post!]!")]
     public static function search_posts(): array
     {
-        global $db;
         $cs = [];
-        foreach ($db["posts"] as $row) {
+        foreach (FakeDB::$db["posts"] as $row) {
             $c = new MyPostClass();
             foreach ($row as $k => $v) {
                 $c->$k = $v;
@@ -144,13 +144,24 @@ class User
     #[Field]
     public string $name;
 
+    // private to avoid direct construction, use by_id() instead
+    private function __construct()
+    {
+    }
+
+    public static function new(int $id, string $name): User
+    {
+        $u = new User();
+        $u->id = $id;
+        $u->name = $name;
+        return $u;
+    }
+
     public static function by_id(int $id): User
     {
-        global $db;
         $u = new User();
-        foreach ($db["users"][$id] as $k => $v) {
-            $u->$k = $v;
-        }
+        $u->id = FakeDB::$db["users"][$id]["id"];
+        $u->name = FakeDB::$db["users"][$id]["name"];
         return $u;
     }
 
@@ -180,10 +191,7 @@ class CreateUserInputs
     #[Mutation]
     public static function create_user(CreateUserInputs $input): User
     {
-        $u = new User();
-        $u->id = 42;
-        $u->name = $input->username;
-        return $u;
+        return User::new(42, $input->username);
     }
 }
 
@@ -216,9 +224,8 @@ class Comment
     #[Field(extends: "Post", name: "comments", type: "[Comment!]!")]
     public static function find_comments_on_post(MyPostClass $self): array
     {
-        global $db;
         $cs = [];
-        foreach ($db["comments"] as $row) {
+        foreach (FakeDB::$db["comments"] as $row) {
             if ($row["post_id"] == $self->id) {
                 $c = new Comment();
                 foreach ($row as $k => $v) {
@@ -240,7 +247,7 @@ class Comment
 #[Mutation]
 function login(string $username, string $password): User
 {
-    return new User();
+    return User::by_id(1);
 }
 
 #[Mutation]
