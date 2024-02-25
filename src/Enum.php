@@ -10,9 +10,9 @@ use Attribute;
 class Enum
 {
     public function __construct(
-        public ?string $name=null,
-        public ?string $description=null,
-        public ?string $deprecationReason=null,
+        public ?string $name = null,
+        public ?string $description = null,
+        public ?string $deprecationReason = null,
     ) {
     }
 }
