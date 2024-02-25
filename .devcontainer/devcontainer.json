@@ -1,0 +1,28 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "PHP",
+	"image": "mcr.microsoft.com/devcontainers/php:1-8.2-bullseye",
+
+	"workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind",
+	"workspaceFolder": "/app",
+
+	"updateContentCommand": "composer install && cp ./.devcontainer/bash_history /root/.bash_history",
+	"containerEnv": {
+		"HISTFILE": "/root/.bash_history"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"recca0120.vscode-phpunit",
+				"ryanluker.vscode-coverage-gutters",
+				"xdebug.php-debug",
+				"DEVSENSE.phptools-vscode",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	}
+
+	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "devcontainer"
+}
