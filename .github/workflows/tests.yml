@@ -22,9 +22,9 @@ jobs:
     - uses: php-actions/composer@v6
     - uses: php-actions/phpunit@v3
       with:
-        version: 9
+        version: 10
         php_version: ${{ matrix.php }}
-        args: --bootstrap vendor/autoload.php tests
+        args: --bootstrap vendor/autoload.php --coverage-text tests
 
   static:
     name: Static Analysis
