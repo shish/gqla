@@ -3,6 +3,7 @@ vendor/
 *.phar
 *.clover
 *.cache
+html/
 
 # only apps need a lock, not libraries
 composer.lock
