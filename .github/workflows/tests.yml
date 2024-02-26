@@ -20,14 +20,15 @@ jobs:
         path: vendor
         key: vendor-${{ hashFiles('composer.json') }}
     - uses: php-actions/composer@v6
-    - uses: php-actions/phpunit@v3
+    - uses: shish/phpunit-action@master
       with:
         version: 10
         php_version: ${{ matrix.php }}
         php_extensions: xdebug
         coverage_text: true
+        coverage_filter: src
         bootstrap: vendor/autoload.php
-        args: --coverage-filter src tests
+        args: tests
       env:
         XDEBUG_MODE: coverage
 
