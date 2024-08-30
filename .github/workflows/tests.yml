@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
 
 jobs:
@@ -11,32 +13,29 @@ jobs:
     name: Unit Tests (PHP ${{ matrix.php }})
     strategy:
       matrix:
-        php: ['8.1', '8.2', '8.3']
+        php: ['8.1', '8.2', '8.3', '8.4']
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
       with:
         path: vendor
         key: vendor-${{ hashFiles('composer.json') }}
     - uses: php-actions/composer@v6
-    - uses: php-actions/phpunit@v3
+    - name: Set up PHP
+      uses: shivammathur/setup-php@master
       with:
-        version: 10
-        php_version: ${{ matrix.php }}
-        php_extensions: xdebug
-        coverage_text: true
-        bootstrap: vendor/autoload.php
-        args: --coverage-filter src tests
-      env:
-        XDEBUG_MODE: coverage
+        php-version: ${{ matrix.php }}
+        coverage: pcov
+    - name: Run test suite
+      run: vendor/bin/phpunit tests --coverage-text --coverage-filter src
 
   static:
     name: Static Analysis
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
       with:
         path: vendor
         key: vendor-${{ hashFiles('composer.json') }}
@@ -50,8 +49,8 @@ jobs:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
       with:
         path: vendor
         key: vendor-${{ hashFiles('composer.json') }}
