@@ -283,18 +283,18 @@ class Schema extends GSchema
                         // If we're adding a new query or mutation, we ignore
                         // $rootValue and the function has no $this
                         if ($extends == "Query" || $extends == "Mutation") {
-                            if(is_a($meth, \ReflectionMethod::class)) {
+                            if (is_a($meth, \ReflectionMethod::class)) {
                                 return $meth->invokeArgs(null, $args);
-                            } elseif(is_a($meth, \ReflectionFunction::class)) {
+                            } elseif (is_a($meth, \ReflectionFunction::class)) {
                                 return $meth->invokeArgs($args);
                             }
                         }
                         // If we're attaching a dynamic field to this object, then
                         // we invoke it with $rootValue as $this.
                         elseif ($extends == $objName) {
-                            if(is_a($meth, \ReflectionMethod::class)) {
+                            if (is_a($meth, \ReflectionMethod::class)) {
                                 return $meth->invokeArgs($rootValue, $args);
-                            } elseif(is_a($meth, \ReflectionFunction::class)) {
+                            } elseif (is_a($meth, \ReflectionFunction::class)) {
                                 return $meth->invokeArgs($args);
                             }
                         }
@@ -303,9 +303,9 @@ class Schema extends GSchema
                         // as the first parameter (except for queries and mutations,
                         // where the function doesn't take the object at all).
                         else {
-                            if(is_a($meth, \ReflectionMethod::class)) {
+                            if (is_a($meth, \ReflectionMethod::class)) {
                                 return $meth->invokeArgs(null, [$rootValue, ...$args]);
-                            } elseif(is_a($meth, \ReflectionFunction::class)) {
+                            } elseif (is_a($meth, \ReflectionFunction::class)) {
                                 return $meth->invokeArgs([$rootValue, ...$args]);
                             }
                         }
@@ -329,7 +329,7 @@ class Schema extends GSchema
         foreach ($reflection->getAttributes() as $objAttr) {
             if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, Enum::class, InputObjectType::class])) {
                 $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
-                switch($objAttr->getName()) {
+                switch ($objAttr->getName()) {
                     case Type::class:
                         log("Found object {$objName}");
                         $t = $this->getOrCreateObjectType($objName);
@@ -354,17 +354,17 @@ class Schema extends GSchema
                         log("Found input object {$objName}");
                         $t = $this->getOrCreateInputObjectType($objName);
                         $ctor = $reflection->getConstructor();
-                        if(is_null($ctor)) {
+                        if (is_null($ctor)) {
                             throw new \Exception("InputObjectTypes must have a constructor");
                         }
                         $params = $ctor->getParameters();
                         $fields = [];
-                        foreach($params as $p) {
+                        foreach ($params as $p) {
                             $field = [
                                 'name' => $p->getName(),
                                 'type' => $this->maybeGetInputType($this->phpTypeToGraphQL($p->getType())),
                             ];
-                            if($p->isDefaultValueAvailable()) {
+                            if ($p->isDefaultValueAvailable()) {
                                 $field['defaultValue'] = $p->getDefaultValue();
                             }
                             $fields[] = $field;
