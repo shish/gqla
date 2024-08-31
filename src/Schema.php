@@ -329,7 +329,7 @@ class Schema extends GSchema
         foreach ($reflection->getAttributes() as $objAttr) {
             if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, Enum::class, InputObjectType::class])) {
                 $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
-                switch($objAttr->getName()) {
+                switch ($objAttr->getName()) {
                     case Type::class:
                         log("Found object {$objName}");
                         $t = $this->getOrCreateObjectType($objName);
@@ -359,7 +359,7 @@ class Schema extends GSchema
                         }
                         $params = $ctor->getParameters();
                         $fields = [];
-                        foreach($params as $p) {
+                        foreach ($params as $p) {
                             $field = [
                                 'name' => $p->getName(),
                                 'type' => $this->maybeGetInputType($this->phpTypeToGraphQL($p->getType())),
