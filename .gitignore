@@ -1,5 +1,6 @@
 vendor/
 .idea/
+coverage/
 *.phar
 *.clover
 *.cache

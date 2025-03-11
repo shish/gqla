@@ -20,8 +20,35 @@ enum State: string
     case Published = "published";
 }
 
+/**
+ * @phpstan-type PostJson array{
+ *     id: int,
+ *     title: string,
+ *     state: State,
+ *     body: string,
+ *     tags: array<string>,
+ *     author_id: int,
+ * }
+ * @phpstan-type UserJson array{
+ *     id: int,
+ *     name: string,
+ * }
+ * @phpstan-type CommentJson array{
+ *     id: int,
+ *     post_id: int,
+ *     author_id: int|null,
+ *     text: string,
+ * }
+ */
 class FakeDB
 {
+    /**
+     * @var array{
+     *     posts: array<int, PostJson>,
+     *     users: array<int, UserJson>,
+     *     comments: array<int, CommentJson>,
+     * }
+     */
     public static array $db = [
         "posts" => [
             1 => [
@@ -69,6 +96,9 @@ class Node
     }
 }
 
+/**
+ * @phpstan-import-type PostJson from FakeDB
+ */
 #[Type(name: "Post", interfaces: ["Node"])]
 class MyPostClass
 {
@@ -86,6 +116,22 @@ class MyPostClass
 
     public int $author_id;
 
+    /**
+     * @param PostJson $j
+     * @return MyPostClass
+     */
+    public static function from_json(array $j): MyPostClass
+    {
+        $u = new MyPostClass();
+        $u->id = $j["id"];
+        $u->title = $j["title"];
+        $u->state = $j["state"];
+        $u->body = $j["body"];
+        $u->tags = $j["tags"];
+        $u->author_id = $j["author_id"];
+        return $u;
+    }
+
     #[Field(name: "id", type: "ID!")]
     public function node_id(): string
     {
@@ -101,21 +147,23 @@ class MyPostClass
     #[Query(name: "post")]
     public static function by_id(int $id): MyPostClass
     {
-        $u = new MyPostClass();
-        foreach (FakeDB::$db["posts"][$id] as $k => $v) {
-            $u->$k = $v;
-        }
-        return $u;
+        return MyPostClass::from_json(FakeDB::$db["posts"][$id]);
     }
 
     #[Mutation]
     public static function create_post(string $title, string $body): MyPostClass
     {
-        $p = new MyPostClass();
-        $p->title = $title;
-        $p->body = $body;
-        FakeDB::$db["posts"][] = $p;
-        return $p;
+        $max_post_id = max(...array_keys(FakeDB::$db["posts"]));
+        $j = [
+            "id" => $max_post_id + 1,
+            "title" => $title,
+            "body" => $body,
+            "state" => State::Draft,
+            "tags" => [],
+            "author_id" => 1,
+        ];
+        FakeDB::$db["posts"][$max_post_id + 1] = $j;
+        return MyPostClass::from_json($j);
     }
 
     /**
@@ -126,11 +174,7 @@ class MyPostClass
     {
         $cs = [];
         foreach (FakeDB::$db["posts"] as $row) {
-            $c = new MyPostClass();
-            foreach ($row as $k => $v) {
-                $c->$k = $v;
-            }
-            $cs[] = $c;
+            $cs[] = MyPostClass::from_json($row);
         }
         return $cs;
     }
