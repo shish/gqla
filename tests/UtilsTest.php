@@ -10,6 +10,15 @@ use GraphQL\Type\Definition\NonNull;
 
 class UtilsTest extends \PHPUnit\Framework\TestCase
 {
+    private static function reflectMethod(string $name): \ReflectionMethod
+    {
+        if (PHP_VERSION_ID >= 80300) {
+            return \ReflectionMethod::createFromMethodName($name);
+        } else {
+            return new \ReflectionMethod($name);
+        }
+    }
+
     public function testMaybeGetType(): void
     {
         $sentinel = Type::id();
@@ -70,7 +79,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
                 "foo" => Type::int(),
                 "bar" => Type::string(),
             ],
-            $schema->getArgs([], \ReflectionMethod::createFromMethodName("UtilsTest::example"), false),
+            $schema->getArgs([], self::reflectMethod("UtilsTest::example"), false),
         );
 
         // test getting types from the override
@@ -79,7 +88,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
                 "foo" => Type::int(),
                 "bar" => Type::boolean(),
             ],
-            $schema->getArgs(["bar" => "boolean"], \ReflectionMethod::createFromMethodName("UtilsTest::example"), false),
+            $schema->getArgs(["bar" => "boolean"], self::reflectMethod("UtilsTest::example"), false),
         );
     }
 
@@ -89,7 +98,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         $schema = new \GQLA\Schema($types, [], []);
         $this->assertEquals(
             "string!",
-            $schema->phpTypeToGraphQL((\ReflectionMethod::createFromMethodName("UtilsTest::example"))->getReturnType()),
+            $schema->phpTypeToGraphQL((self::reflectMethod("UtilsTest::example"))->getReturnType()),
         );
     }
 
@@ -114,7 +123,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
     {
         // Inspecting a non-annotated function should do nothing
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectFunction(\ReflectionMethod::createFromMethodName("UtilsTest::example"));
+        $schema->inspectFunction(self::reflectMethod("UtilsTest::example"));
         $this->assertEquals([], $schema->types);
     }
 
@@ -136,7 +145,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
     {
         // Inspecting a method of a class should add a new field to that class
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectFunction(\ReflectionMethod::createFromMethodName("\Demo\MyPostClass::author"), "Post");
+        $schema->inspectFunction(self::reflectMethod("\Demo\MyPostClass::author"), "Post");
         $fields = $schema->getOrCreateObjectType("Post")->config["fields"];
         assert(is_array($fields));
         $this->assertArrayHasKey("Post", $schema->types);
@@ -147,7 +156,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
     {
         // A field added to a type can have parameters
         $schema = new \GQLA\Schema(null, [], []);
-        $schema->inspectFunction(\ReflectionMethod::createFromMethodName("\Demo\Comment::add_comment_id"), "Comment");
+        $schema->inspectFunction(self::reflectMethod("\Demo\Comment::add_comment_id"), "Comment");
         $fields = $schema->getOrCreateObjectType("User")->config["fields"];
         assert(is_array($fields));
         $this->assertArrayHasKey("User", $schema->types);
@@ -165,7 +174,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
         // #[Query(name: "posts")]
         // should create a new "posts" field on the Query type
         $schema = new \GQLA\Schema([], [], []);
-        $schema->inspectFunction(\ReflectionMethod::createFromMethodName("\Demo\MyPostClass::search_posts"), "Post");
+        $schema->inspectFunction(self::reflectMethod("\Demo\MyPostClass::search_posts"), "Post");
         $fields = $schema->getOrCreateObjectType("Query")->config["fields"];
         assert(is_array($fields));
         $this->assertArrayHasKey("Query", $schema->types);
