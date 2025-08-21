@@ -378,7 +378,7 @@ class Schema extends GSchema
         $objName = null;
 
         foreach ($reflection->getAttributes() as $objAttr) {
-            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class])) {
+            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, InputObjectType::class])) {
                 $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
             }
         }
