@@ -17,6 +17,11 @@ function log(string $s): void
     // echo "$s\n";
 }
 
+/**
+ * @phpstan-import-type ObjectConfig from GObjectType
+ * @phpstan-import-type EnumTypeConfig from GEnumType
+ * @phpstan-import-type InputObjectConfig from GInputObjectType
+ */
 class Schema extends GSchema
 {
     /** @var array<string,string> */
@@ -26,13 +31,21 @@ class Schema extends GSchema
     public array $types = [];
 
     /**
-     * @param array<string,GType> $types
      * @param class-string[] $classes
      * @param string[] $functions
      */
-    public function __construct(?array $types = null, ?array $classes = null, ?array $functions = null)
+    public function __construct(?array $classes = null, ?array $functions = null)
     {
-        $this->types = $types ?? [
+        $query_base = new GObjectType([
+            "name" => "Query",
+            "fields" => [],
+        ]);
+        $mutation_base = new GObjectType([
+            "name" => "Mutation",
+            "fields" => [],
+        ]);
+
+        $this->types = [
             "ID" => GType::id(),
             "string" => GType::string(),
             "String" => GType::string(),
@@ -42,27 +55,38 @@ class Schema extends GSchema
             "Float" => GType::float(),
             "bool" => GType::boolean(),
             "Boolean" => GType::boolean(),
+            "Query" => $query_base,
+            "Mutation" => $mutation_base,
         ];
         $classes ??= get_declared_classes();
         $functions ??= get_defined_functions()["user"];
 
+        // First inspect all the classes, and see if any of them are annotated
+        // as GraphQL types. Populate $this->types based on these annotations.
         foreach ($classes as $cls) {
-            $this->inspectClass(new \ReflectionClass($cls));
+            $this->inspectClassAnnotations(new \ReflectionClass($cls));
         }
+
+        // Check for class properties and methods, turn these into Fields
+        // of the types we just created (Do this as a second pass, because
+        // a Field on object #1 might refer to a Type created by object #2).
+        foreach ($classes as $cls) {
+            $this->inspectClassItems(new \ReflectionClass($cls));
+        }
+
+        // Check for any stand-alone functions which are annotated to become
+        // fields via #[Field(extends: "Type")], or queries via #[Query], or
+        // mutations via #[Mutation].
         foreach ($functions as $func) {
             $this->inspectFunction(new \ReflectionFunction($func));
         }
 
         // var_export(array_keys($this->types));
 
-        $config = [];
-        if (in_array("Query", $this->types)) {
-            $config["query"] = $this->getOrCreateObjectType("Query");
-        }
-        if (in_array("Mutation", $this->types)) {
-            $config["mutation"] = $this->getOrCreateObjectType("Mutation");
-        }
-        parent::__construct($config);
+        parent::__construct([
+            'query' => $query_base,
+            'mutation' => $mutation_base,
+        ]);
     }
 
     /**
@@ -123,7 +147,7 @@ class Schema extends GSchema
      *   }
      *
      * then we want to create one new ObjectType named Foo,
-     * but add two entries into $_gqla_types for both Foo
+     * but add two entries into $types for both Foo
      * and Bar, so that later on when somebody does
      *
      *   #[Field]
@@ -145,51 +169,12 @@ class Schema extends GSchema
      * then we also want to create and register a Foo object
      * with a blah() field
      */
-    public function getOrCreateObjectType(string $n): GObjectType
+    private function createType(string $name, GType $type): void
     {
-        if (!array_key_exists($n, $this->types)) {
-            $this->types[$n] = new GObjectType([
-                'name' => $n,
-                'fields' => [],
-            ]);
+        if (array_key_exists($name, $this->types)) {
+            throw new \Exception("Type $name already exists");
         }
-        if (!is_a($this->types[$n], GObjectType::class)) {
-            throw new \Exception("Type $n exists, but is not an ObjectType");
-        }
-        return $this->types[$n];
-    }
-    public function getOrCreateInterfaceType(string $n): GInterfaceType
-    {
-        if (!array_key_exists($n, $this->types)) {
-            $this->types[$n] = new GInterfaceType([
-                'name' => $n,
-                'fields' => [],
-            ]);
-        }
-        if (!is_a($this->types[$n], GInterfaceType::class)) {
-            throw new \Exception("Type $n exists, but is not an InterfaceType");
-        }
-        return $this->types[$n];
-    }
-    public function getOrCreateEnumType(string $n): GEnumType
-    {
-        if (!array_key_exists($n, $this->types) || !is_a($this->types[$n], GEnumType::class)) {
-            $this->types[$n] = new GEnumType([
-                'name' => $n,
-                'values' => [],
-            ]);
-        }
-        return $this->types[$n];
-    }
-    public function getOrCreateInputObjectType(string $n): GInputObjectType
-    {
-        if (!array_key_exists($n, $this->types) || !is_a($this->types[$n], GInputObjectType::class)) {
-            $this->types[$n] = new GInputObjectType([
-                'name' => $n,
-                'fields' => [],
-            ]);
-        }
-        return $this->types[$n];
+        $this->types[$name] = $type;
     }
 
     /**
@@ -198,7 +183,7 @@ class Schema extends GSchema
      * takes an array as input, then we need to provide an
      * override to tell graphql what kind of array it is.
      *
-     *   #[GraphQLField(args: ["tags" => "[string]"])]
+     *   #[Field(args: ["tags" => "[string]"])]
      *   function foo(int $id, array $tags): int {
      *     ...
      *   }
@@ -239,12 +224,6 @@ class Schema extends GSchema
         return $type->getName() . ($type->allowsNull() ? "" : "!");
     }
 
-    public function noNamespace(string $name): string
-    {
-        $parts = explode("\\", $name);
-        return $parts[count($parts) - 1];
-    }
-
     /**
      * Look at a function or a method, if it is a query or
      * a mutation, add it to the relevant list
@@ -271,7 +250,11 @@ class Schema extends GSchema
 
                 $extendingOtherObject = ($extends != $objName && $extends != "Query" && $extends != "Mutation");
 
-                $parentType = $this->getOrCreateObjectType($extends);
+                $parentType = $this->types[$extends] ?? null;
+                if (!$parentType) {
+                    throw new \Exception("Can't find parent Type $extends for method $methName (Known types: " .
+                        join(", ", array_keys($this->types)) . ")");
+                }
                 // 'fields' can be a callable, but the objects _we_ create are always arrays
                 // @phpstan-ignore-next-line
                 $parentType->config['fields'][$methName] = [
@@ -321,45 +304,55 @@ class Schema extends GSchema
      * @template T of object
      * @param \ReflectionClass<T> $reflection
      */
-    public function inspectClass(\ReflectionClass $reflection): void
+    public function inspectClassAnnotations(\ReflectionClass $reflection): void
     {
-        $objName = null;
-
-        // Check if the given class is an Object
         foreach ($reflection->getAttributes() as $objAttr) {
-            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class, Enum::class, InputObjectType::class])) {
-                $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
-                switch ($objAttr->getName()) {
-                    case Type::class:
-                        log("Found object {$objName}");
-                        $t = $this->getOrCreateObjectType($objName);
-                        break;
-                    case InterfaceType::class:
-                        log("Found interface {$objName}");
-                        $t = $this->getOrCreateInterfaceType($objName);
-                        break;
-                    case Enum::class:
-                        log("Found enum {$objName}");
-                        $t = $this->getOrCreateEnumType($objName);
-                        $vals = [];
-                        foreach ($reflection->getConstants() as $k => $v) {
-                            $vals[$k] = [
-                                'value' => $v,
-                                // 'description' =>
-                            ];
-                        }
-                        $t->config['values'] = $vals;
-                        break;
-                    case InputObjectType::class:
-                        log("Found input object {$objName}");
-                        $t = $this->getOrCreateInputObjectType($objName);
-                        $ctor = $reflection->getConstructor();
-                        if (is_null($ctor)) {
-                            throw new \Exception("InputObjectTypes must have a constructor");
-                        }
-                        $params = $ctor->getParameters();
-                        $fields = [];
-                        foreach ($params as $p) {
+            $attrName = $objAttr->getName();
+            if (!in_array($attrName, [Type::class, InterfaceType::class, Enum::class, InputObjectType::class])) {
+                continue;
+            }
+
+            $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
+            $this->cls2type[$reflection->getName()] = $objName;
+
+            log("Found $attrName $objName");
+            match ($attrName) {
+                Type::class => $this->createType(
+                    $objName,
+                    new GObjectType([
+                        "name" => $objName,
+                        "fields" => [],
+                        "interfaces" => fn () => array_map(
+                            function ($x) use ($objName) {
+                                $t = $this->types[$x];
+                                if ($t instanceof GInterfaceType) {
+                                    return $t;
+                                }
+                                throw new \Exception("Type $objName has $x as an interface, but $x is not an InterfaceType");
+                            },
+                            $objAttr->getArguments()['interfaces'] ?? []
+                        ),
+                    ]),
+                ),
+                InterfaceType::class => $this->createType(
+                    $objName,
+                    new GInterfaceType([
+                        'name' => $objName,
+                        'fields' => [],
+                    ])
+                ),
+                Enum::class => $this->createType(
+                    $objName,
+                    new GEnumType([
+                        "name" => $objName,
+                        "values" => $this->getEnumValues($reflection->getConstants())
+                    ])
+                ),
+                InputObjectType::class => $this->createType(
+                    $objName,
+                    new GInputObjectType([
+                        'name' => $objName,
+                        'fields' => array_map(function ($p) {
                             $field = [
                                 'name' => $p->getName(),
                                 'type' => $this->maybeGetInputType($this->phpTypeToGraphQL($p->getType())),
@@ -367,19 +360,26 @@ class Schema extends GSchema
                             if ($p->isDefaultValueAvailable()) {
                                 $field['defaultValue'] = $p->getDefaultValue();
                             }
-                            $fields[] = $field;
-                        }
-                        $t->config['fields'] = $fields;
-                        $t->config['parseValue'] = fn (array $values) => $reflection->newInstanceArgs($values);
-                        break;
-                    default:
-                        throw new \Exception("Invalid object type: " . $objAttr->getName());
-                }
-                $this->cls2type[$reflection->getName()] = $objName;
-                $t->config['interfaces'] = array_map(
-                    fn ($x) => $this->getOrCreateInterfaceType($x),
-                    $objAttr->getArguments()['interfaces'] ?? []
-                );
+                            return $field;
+                        }, $reflection->getConstructor()?->getParameters() ?? []),
+                        'parseValue' => fn (array $values) => $reflection->newInstanceArgs($values),
+                    ])
+                ),
+            };
+        }
+    }
+
+    /**
+     * @template T of object
+     * @param \ReflectionClass<T> $reflection
+     */
+    public function inspectClassItems(\ReflectionClass $reflection): void
+    {
+        $objName = null;
+
+        foreach ($reflection->getAttributes() as $objAttr) {
+            if (in_array($objAttr->getName(), [Type::class, InterfaceType::class])) {
+                $objName = $objAttr->getArguments()['name'] ?? $this->noNamespace($reflection->getName());
             }
         }
 
@@ -390,9 +390,12 @@ class Schema extends GSchema
                     $propType = $propAttr->getArguments()['type'] ?? $this->phpTypeToGraphQL($prop->getType());
                     $extends = $propAttr->getArguments()['extends'] ?? $objName;
                     if (is_null($extends)) {
-                        throw new \Exception("Field must be attached to a Type, either implicitly or with 'extends'");
+                        throw new \Exception("Field $propName must be attached to a Type, either implicitly or with 'extends'");
                     }
-                    $parentType = $this->types[$extends] ?? $this->getOrCreateObjectType($extends);
+                    $parentType = $this->types[$extends] ?? null;
+                    if (is_null($parentType)) {
+                        throw new \Exception("Field $propName is trying to extend $extends, but that Type does not exist");
+                    }
                     // 'fields' can be a callable, but the objects _we_ create are always arrays
                     // @phpstan-ignore-next-line
                     $parentType->config['fields'][$propName] = [
@@ -406,5 +409,33 @@ class Schema extends GSchema
         foreach ($reflection->getMethods() as $meth) {
             $this->inspectFunction($meth, $objName);
         }
+    }
+
+    /**
+     * A helper function to convert a PHP Enum's constants
+     * into a format that GraphQL expects for GEnumType
+     *
+     * @param array<string,mixed> $consts
+     * @return array<string,array{value:mixed}>
+     */
+    private function getEnumValues(array $consts): array
+    {
+        $vals = [];
+        foreach ($consts as $k => $v) {
+            $vals[$k] = [
+                'value' => $v,
+                // 'description' =>
+            ];
+        }
+        return $vals;
+    }
+
+    /**
+     * Helper function to remove the namespace from a class or function name.
+     */
+    public function noNamespace(string $name): string
+    {
+        $parts = explode("\\", $name);
+        return $parts[count($parts) - 1];
     }
 }
