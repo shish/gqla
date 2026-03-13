@@ -12,11 +12,7 @@ class UtilsTest extends \PHPUnit\Framework\TestCase
 {
     private static function reflectMethod(string $name): \ReflectionMethod
     {
-        if (PHP_VERSION_ID >= 80300) {
-            return \ReflectionMethod::createFromMethodName($name);
-        } else {
-            return new \ReflectionMethod($name);
-        }
+        return \ReflectionMethod::createFromMethodName($name);
     }
 
     public function testMaybeGetType(): void

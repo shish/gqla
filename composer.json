@@ -14,7 +14,7 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "webonyx/graphql-php": "^v15.21.0"
     },
     "require-dev": {
