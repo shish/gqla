@@ -5,6 +5,7 @@ coverage/
 *.clover
 *.cache
 html/
+.phpactor.json
 
 # only apps need a lock, not libraries
 composer.lock
